@@ -32,9 +32,10 @@ contract LendefiAssetsBranchTest is BasicDeploy {
         // Deploy a separate assets proxy for upgrade testing
         // The market-based deployment gives us cloned assets modules, but upgrade tests need UUPS proxies
         LendefiPoRFeed porFeedImpl = new LendefiPoRFeed();
+        (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
         bytes memory initData = abi.encodeCall(
             LendefiAssets.initialize,
-            (address(timelockInstance), charlie, address(porFeedImpl), address(marketCoreInstance))
+            (address(timelockInstance), charlie, address(porFeedImpl), address(marketCoreInstance), networkUSDC, networkWETH, UsdcWethPool)
         );
         address payable assetsProxy = payable(Upgrades.deployUUPSProxy("LendefiAssets.sol", initData));
         assetsProxyForUpgrades = LendefiAssets(assetsProxy);

@@ -726,7 +726,8 @@ contract BasicDeploy is Test {
             (
                 address(timelockInstance),
                 charlie,
-                address(porFeedImplementation)
+                address(porFeedImplementation),
+                address(0)
             )
         );
 
@@ -1023,7 +1024,6 @@ contract BasicDeploy is Test {
         // Grant necessary roles
         vm.startPrank(address(timelockInstance));
         ecoInstance.grantRole(REWARDER_ROLE, address(marketCoreInstance));
-        assetsInstance.setCoreAddress(address(marketCoreInstance));
         vm.stopPrank();
     }
 

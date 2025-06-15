@@ -34,7 +34,7 @@ contract LendefiAssetsBranchTest is BasicDeploy {
         LendefiPoRFeed porFeedImpl = new LendefiPoRFeed();
         bytes memory initData = abi.encodeCall(
             LendefiAssets.initialize,
-            (address(timelockInstance), charlie, address(porFeedImpl))
+            (address(timelockInstance), charlie, address(porFeedImpl), address(marketCoreInstance))
         );
         address payable assetsProxy = payable(Upgrades.deployUUPSProxy("LendefiAssets.sol", initData));
         assetsProxyForUpgrades = LendefiAssets(assetsProxy);
@@ -379,7 +379,6 @@ contract LendefiAssetsBranchTest is BasicDeploy {
 
     function test_5_1_IsAssetAtCapacity() public {
         vm.startPrank(address(timelockInstance));
-        assetsInstance.setCoreAddress(address(marketCoreInstance));
 
         // Mock marketCoreInstance.getAssetTVL call
         vm.mockCall(

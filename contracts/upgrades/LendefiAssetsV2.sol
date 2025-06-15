@@ -118,14 +118,15 @@ contract LendefiAssetsV2 is
      * @notice Initializes the contract with core configuration and access control settings
      * @dev This can only be called once through the proxy's initializer
      * @param timelock_ Address of the timelock_ contract that will have admin privileges
-     * @param multisig Address of the multisig wallet for emergency controls
+     * @param marketOwner Address of the market owner who will have management privileges
      * @param porFeed_ Proof of Reserve feed address
+     * @param coreAddress_ Address of the core contract
      * @custom:security Sets up the initial access control roles:
      * - DEFAULT_ADMIN_ROLE: timelock_
-     * - MANAGER_ROLE: timelock_
-     * - UPGRADER_ROLE: multisig, timelock_
-     * - PAUSER_ROLE: multisig, timelock_
-     * - CIRCUIT_BREAKER_ROLE: timelock_, multisig
+     * - MANAGER_ROLE: timelock_, marketOwner
+     * - UPGRADER_ROLE: timelock_
+     * - PAUSER_ROLE: marketOwner, timelock_
+     * - PROTOCOL_ROLE: coreAddress_
      * @custom:oracle-config Initializes oracle configuration with the following defaults:
      * - freshnessThreshold: 28800 (8 hours)
      * - volatilityThreshold: 3600 (1 hour)
@@ -133,15 +134,12 @@ contract LendefiAssetsV2 is
      * - circuitBreakerThreshold: 50%
      * @custom:version Sets initial contract version to 1
      */
-    function initialize(
-        address timelock_,
-        address multisig,
-        address porFeed_
-    ) external initializer {
+    function initialize(address timelock_, address marketOwner, address porFeed_, address coreAddress_)
+        external
+        initializer
+    {
         if (
-            timelock_ == address(0) ||
-            multisig == address(0) ||
-            porFeed_ == address(0)
+            timelock_ == address(0) || marketOwner == address(0) || porFeed_ == address(0) || coreAddress_ == address(0)
         ) {
             revert ZeroAddressNotAllowed();
         }
@@ -153,9 +151,9 @@ contract LendefiAssetsV2 is
 
         _grantRole(DEFAULT_ADMIN_ROLE, timelock_);
         _grantRole(LendefiConstants.MANAGER_ROLE, timelock_);
-        _grantRole(LendefiConstants.UPGRADER_ROLE, multisig);
+        _grantRole(LendefiConstants.MANAGER_ROLE, marketOwner);
         _grantRole(LendefiConstants.UPGRADER_ROLE, timelock_);
-        _grantRole(LendefiConstants.PAUSER_ROLE, multisig);
+        _grantRole(LendefiConstants.PAUSER_ROLE, marketOwner);
         _grantRole(LendefiConstants.PAUSER_ROLE, timelock_);
 
         // Initialize oracle config
@@ -169,6 +167,9 @@ contract LendefiAssetsV2 is
         _initializeDefaultTierParameters();
 
         porFeed = porFeed_;
+        coreAddress = coreAddress_;
+        lendefiInstance = IPROTOCOL(coreAddress_);
+        _grantRole(LendefiConstants.PROTOCOL_ROLE, coreAddress_);
 
         timelock = timelock_;
         version = 1;
@@ -180,11 +181,7 @@ contract LendefiAssetsV2 is
      * @param oracle The oracle address
      * @param active active or not (1 or 0)
      */
-    function updateChainlinkOracle(
-        address asset,
-        address oracle,
-        uint8 active
-    )
+    function updateChainlinkOracle(address asset, address oracle, uint8 active)
         external
         nonZeroAddress(oracle)
         onlyListedAsset(asset)
@@ -192,10 +189,7 @@ contract LendefiAssetsV2 is
         whenNotPaused
     {
         // Update Chainlink configuration
-        assetInfo[asset].chainlinkConfig = ChainlinkOracleConfig({
-            oracleUSD: oracle,
-            active: active
-        });
+        assetInfo[asset].chainlinkConfig = ChainlinkOracleConfig({oracleUSD: oracle, active: active});
 
         // Create a memory copy of the asset configuration to validate
         Asset memory configCopy = assetInfo[asset];
@@ -216,29 +210,18 @@ contract LendefiAssetsV2 is
      * @param volatilityPct Maximum allowed price change percentage (5-30%)
      * @param circuitBreakerPct Price deviation to trigger circuit breaker (25-70%)
      */
-    function updateMainOracleConfig(
-        uint80 freshness,
-        uint80 volatility,
-        uint40 volatilityPct,
-        uint40 circuitBreakerPct
-    ) external onlyRole(LendefiConstants.MANAGER_ROLE) whenNotPaused {
+    function updateMainOracleConfig(uint80 freshness, uint80 volatility, uint40 volatilityPct, uint40 circuitBreakerPct)
+        external
+        onlyRole(LendefiConstants.MANAGER_ROLE)
+        whenNotPaused
+    {
         // Validate parameters
         if (freshness < 15 minutes || freshness > 24 hours) {
-            revert InvalidThreshold(
-                "freshness",
-                freshness,
-                15 minutes,
-                24 hours
-            );
+            revert InvalidThreshold("freshness", freshness, 15 minutes, 24 hours);
         }
 
         if (volatility < 5 minutes || volatility > 4 hours) {
-            revert InvalidThreshold(
-                "volatility",
-                volatility,
-                5 minutes,
-                4 hours
-            );
+            revert InvalidThreshold("volatility", volatility, 5 minutes, 4 hours);
         }
 
         if (volatilityPct < 5 || volatilityPct > 30) {
@@ -246,12 +229,7 @@ contract LendefiAssetsV2 is
         }
 
         if (circuitBreakerPct < 25 || circuitBreakerPct > 70) {
-            revert InvalidThreshold(
-                "circuitBreaker",
-                circuitBreakerPct,
-                25,
-                70
-            );
+            revert InvalidThreshold("circuitBreaker", circuitBreakerPct, 25, 70);
         }
 
         // Update config
@@ -264,18 +242,9 @@ contract LendefiAssetsV2 is
 
         // Emit events
         emit FreshnessThresholdUpdated(oldConfig.freshnessThreshold, freshness);
-        emit VolatilityThresholdUpdated(
-            oldConfig.volatilityThreshold,
-            volatility
-        );
-        emit VolatilityPercentageUpdated(
-            oldConfig.volatilityPercentage,
-            volatilityPct
-        );
-        emit CircuitBreakerThresholdUpdated(
-            oldConfig.circuitBreakerThreshold,
-            circuitBreakerPct
-        );
+        emit VolatilityThresholdUpdated(oldConfig.volatilityThreshold, volatility);
+        emit VolatilityPercentageUpdated(oldConfig.volatilityPercentage, volatilityPct);
+        emit CircuitBreakerThresholdUpdated(oldConfig.circuitBreakerThreshold, circuitBreakerPct);
     }
 
     /**
@@ -284,11 +253,11 @@ contract LendefiAssetsV2 is
      * @param jumpRate New jump rate (max 0.25e6 = 25%)
      * @param liquidationFee New liquidation fee (max 0.1e6 = 10%)
      */
-    function updateTierConfig(
-        CollateralTier tier,
-        uint256 jumpRate,
-        uint256 liquidationFee
-    ) external onlyRole(LendefiConstants.MANAGER_ROLE) whenNotPaused {
+    function updateTierConfig(CollateralTier tier, uint256 jumpRate, uint256 liquidationFee)
+        external
+        onlyRole(LendefiConstants.MANAGER_ROLE)
+        whenNotPaused
+    {
         if (jumpRate > 0.25e6) revert RateTooHigh(jumpRate, 0.25e6);
         if (liquidationFee > 0.1e6) revert FeeTooHigh(liquidationFee, 0.1e6);
 
@@ -299,27 +268,6 @@ contract LendefiAssetsV2 is
     }
 
     // ==================== CORE FUNCTIONS ====================
-
-    /**
-     * @notice Updates the core protocol contract address
-     * @dev This function can only be called by the DEFAULT_ADMIN_ROLE when the contract is not paused
-     * @param newCore Address of the new core protocol contract
-     * @custom:security Validates that the new address is not zero
-     * @custom:access Restricted to DEFAULT_ADMIN_ROLE
-     * @custom:emits CoreAddressUpdated event with the new core address
-     */
-    function setCoreAddress(
-        address newCore
-    )
-        external
-        nonZeroAddress(newCore)
-        onlyRole(DEFAULT_ADMIN_ROLE)
-        whenNotPaused
-    {
-        coreAddress = newCore;
-        lendefiInstance = IPROTOCOL(newCore);
-        emit CoreAddressUpdated(newCore);
-    }
 
     /**
      * @notice Pauses all contract operations
@@ -354,10 +302,7 @@ contract LendefiAssetsV2 is
      * @custom:validation Asset address cannot be zero
      * @custom:emits UpdateAssetConfig when configuration is updated
      */
-    function updateAssetConfig(
-        address asset,
-        Asset memory config
-    )
+    function updateAssetConfig(address asset, Asset memory config)
         external
         nonZeroAddress(asset)
         onlyRole(LendefiConstants.MANAGER_ROLE)
@@ -369,12 +314,7 @@ contract LendefiAssetsV2 is
         // If Uniswap oracle is active, validate pool configuration
         if (config.poolConfig.active == 1) {
             // Use the full validation with all parameters
-            _validatePool(
-                asset,
-                config.poolConfig.pool,
-                config.poolConfig.twapPeriod,
-                config.poolConfig.active
-            );
+            _validatePool(asset, config.poolConfig.pool, config.poolConfig.twapPeriod, config.poolConfig.active);
         }
 
         bool newAsset = !listedAssets.contains(asset);
@@ -389,8 +329,9 @@ contract LendefiAssetsV2 is
             if (config.porFeed.code.length == 0) revert CloneDeploymentFailed();
             IPoRFeed(config.porFeed).initialize(asset, address(this), timelock);
         } else {
-            if (config.porFeed != assetInfo[asset].porFeed)
+            if (config.porFeed != assetInfo[asset].porFeed) {
                 revert InvalidParameter("porFeed", 0);
+            }
         }
 
         assetInfo[asset] = config;
@@ -408,10 +349,7 @@ contract LendefiAssetsV2 is
      * @custom:validation Asset must be previously listed
      * @custom:emits AssetTierUpdated when tier is changed
      */
-    function updateAssetTier(
-        address asset,
-        CollateralTier newTier
-    )
+    function updateAssetTier(address asset, CollateralTier newTier)
         external
         onlyListedAsset(asset)
         onlyRole(LendefiConstants.MANAGER_ROLE)
@@ -426,29 +364,17 @@ contract LendefiAssetsV2 is
      * @dev Only callable by addresses with LendefiConstants.UPGRADER_ROLE
      * @param newImplementation Address of the new implementation contract
      */
-    function scheduleUpgrade(
-        address newImplementation
-    )
+    function scheduleUpgrade(address newImplementation)
         external
         nonZeroAddress(newImplementation)
         onlyRole(LendefiConstants.UPGRADER_ROLE)
     {
         uint64 currentTime = uint64(block.timestamp);
-        uint64 effectiveTime = currentTime +
-            uint64(LendefiConstants.UPGRADE_TIMELOCK_DURATION);
+        uint64 effectiveTime = currentTime + uint64(LendefiConstants.UPGRADE_TIMELOCK_DURATION);
 
-        pendingUpgrade = UpgradeRequest({
-            implementation: newImplementation,
-            scheduledTime: currentTime,
-            exists: true
-        });
+        pendingUpgrade = UpgradeRequest({implementation: newImplementation, scheduledTime: currentTime, exists: true});
 
-        emit UpgradeScheduled(
-            msg.sender,
-            newImplementation,
-            currentTime,
-            effectiveTime
-        );
+        emit UpgradeScheduled(msg.sender, newImplementation, currentTime, effectiveTime);
     }
 
     /**
@@ -473,9 +399,7 @@ contract LendefiAssetsV2 is
      * @return triggered Whether the circuit breaker is now active
      * @return deviation The percentage deviation that affected the decision
      */
-    function evaluateCircuitBreaker(
-        address asset
-    )
+    function evaluateCircuitBreaker(address asset)
         external
         onlyListedAsset(asset)
         returns (bool triggered, uint256 deviation)
@@ -489,9 +413,7 @@ contract LendefiAssetsV2 is
 
         // Dual oracle case - check price deviation between oracles
         if (chainlinkActive == 1 && uniswapActive == 1) {
-            (bool hasDeviation, uint256 devPercent) = checkPriceDeviation(
-                asset
-            );
+            (bool hasDeviation, uint256 devPercent) = checkPriceDeviation(asset);
             if (hasDeviation) {
                 shouldBreak = true;
                 deviationPct = devPercent;
@@ -504,15 +426,11 @@ contract LendefiAssetsV2 is
 
             // Get timestamp to check age
             address oracle = info.chainlinkConfig.oracleUSD;
-            (, , , uint256 timestamp, ) = AggregatorV3Interface(oracle)
-                .latestRoundData();
+            (,,, uint256 timestamp,) = AggregatorV3Interface(oracle).latestRoundData();
             uint256 age = block.timestamp - timestamp;
 
             // Check if volatility exceeds threshold and price is old enough
-            if (
-                deviationPct >= mainOracleConfig.volatilityPercentage &&
-                age >= mainOracleConfig.volatilityThreshold
-            ) {
+            if (deviationPct >= mainOracleConfig.volatilityPercentage && age >= mainOracleConfig.volatilityThreshold) {
                 shouldBreak = true;
             }
         }
@@ -540,10 +458,12 @@ contract LendefiAssetsV2 is
      * @param tvl The total value locked for the asset
      * @return usdValue The price in USD (scaled by 1e8)
      */
-    function updateAssetPoRFeed(
-        address asset,
-        uint256 tvl
-    ) external onlyListedAsset(asset) returns (uint256 usdValue) {
+    function updateAssetPoRFeed(address asset, uint256 tvl)
+        external
+        onlyListedAsset(asset)
+        onlyRole(LendefiConstants.PROTOCOL_ROLE)
+        returns (uint256 usdValue)
+    {
         // Get PoR feed
         address feedAddr = assetInfo[asset].porFeed;
         // Update the reserves on the feed
@@ -560,10 +480,7 @@ contract LendefiAssetsV2 is
      * @param oracleType The oracle type to retrieve
      * @return The oracle address for the specified type, or address(0) if none exists
      */
-    function getOracleByType(
-        address asset,
-        OracleType oracleType
-    ) external view returns (address) {
+    function getOracleByType(address asset, OracleType oracleType) external view returns (address) {
         if (oracleType == OracleType.UNISWAP_V3_TWAP) {
             return assetInfo[asset].poolConfig.pool;
         }
@@ -577,10 +494,12 @@ contract LendefiAssetsV2 is
      * @param oracleType The specific oracle type to query
      * @return The price from the specified oracle type
      */
-    function getAssetPriceByType(
-        address asset,
-        OracleType oracleType
-    ) external view onlyListedAsset(asset) returns (uint256) {
+    function getAssetPriceByType(address asset, OracleType oracleType)
+        external
+        view
+        onlyListedAsset(asset)
+        returns (uint256)
+    {
         if (circuitBroken[asset]) {
             revert CircuitBreakerActive(asset);
         }
@@ -598,49 +517,10 @@ contract LendefiAssetsV2 is
      * @return timeRemaining The time remaining in seconds
      */
     function upgradeTimelockRemaining() external view returns (uint256) {
-        return
-            pendingUpgrade.exists &&
-                block.timestamp <
-                pendingUpgrade.scheduledTime +
-                    LendefiConstants.UPGRADE_TIMELOCK_DURATION
-                ? pendingUpgrade.scheduledTime +
-                    LendefiConstants.UPGRADE_TIMELOCK_DURATION -
-                    block.timestamp
-                : 0;
-    }
-
-    /**
-     * @notice Retrieves detailed information about an asset
-     * @dev Combines multiple data points into a single view call
-     * @param asset The address of the asset to query
-     * @return price Current oracle price of the asset
-     * @return tvl Total value locked for the asset
-     * @return maxSupply Maximum supply threshold for the asset
-     * @return tier Collateral tier classification
-     * @custom:validation Asset must be listed
-     */
-    function getAssetDetails(
-        address asset
-    )
-        external
-        view
-        onlyListedAsset(asset)
-        returns (
-            uint256 price,
-            uint256 tvl,
-            uint256 maxSupply,
-            CollateralTier tier
-        )
-    {
-        // Direct storage access instead of copying entire struct
-        maxSupply = assetInfo[asset].maxSupplyThreshold;
-        tier = assetInfo[asset].tier;
-
-        // Get price (this will revert if circuit breaker is active)
-        price = getAssetPrice(asset);
-
-        // Get total supplied from protocol
-        (tvl, , ) = lendefiInstance.getAssetTVL(asset);
+        return pendingUpgrade.exists
+            && block.timestamp < pendingUpgrade.scheduledTime + LendefiConstants.UPGRADE_TIMELOCK_DURATION
+            ? pendingUpgrade.scheduledTime + LendefiConstants.UPGRADE_TIMELOCK_DURATION - block.timestamp
+            : 0;
     }
 
     /**
@@ -649,11 +529,7 @@ contract LendefiAssetsV2 is
      * @return jumpRates Array of jump rates for each tier [STABLE, CROSS_A, CROSS_B, ISOLATED]
      * @return liquidationFees Array of liquidation fees for each tier [STABLE, CROSS_A, CROSS_B, ISOLATED]
      */
-    function getTierRates()
-        external
-        view
-        returns (uint256[4] memory jumpRates, uint256[4] memory liquidationFees)
-    {
+    function getTierRates() external view returns (uint256[4] memory jumpRates, uint256[4] memory liquidationFees) {
         jumpRates[0] = tierConfig[CollateralTier.STABLE].jumpRate;
         jumpRates[1] = tierConfig[CollateralTier.CROSS_A].jumpRate;
         jumpRates[2] = tierConfig[CollateralTier.CROSS_B].jumpRate;
@@ -670,9 +546,7 @@ contract LendefiAssetsV2 is
      * @param tier The collateral tier to query
      * @return The jump rate for the specified tier
      */
-    function getTierJumpRate(
-        CollateralTier tier
-    ) external view returns (uint256) {
+    function getTierJumpRate(CollateralTier tier) external view returns (uint256) {
         return tierConfig[tier].jumpRate;
     }
 
@@ -693,11 +567,12 @@ contract LendefiAssetsV2 is
      * @return true if supply would exceed maximum threshold
      * @custom:validation Asset must be listed
      */
-    function isAssetAtCapacity(
-        address asset,
-        uint256 amount,
-        uint256 tvl
-    ) external view onlyListedAsset(asset) returns (bool) {
+    function isAssetAtCapacity(address asset, uint256 amount, uint256 tvl)
+        external
+        view
+        onlyListedAsset(asset)
+        returns (bool)
+    {
         // Check standard supply cap
         if (tvl + amount > assetInfo[asset].maxSupplyThreshold) {
             return true;
@@ -713,10 +588,7 @@ contract LendefiAssetsV2 is
      * @param amount The amount to validate
      * @return limitReached true if amount exceeds 3% of pool liquidity
      */
-    function poolLiquidityLimit(
-        address asset,
-        uint256 amount
-    ) external view returns (bool limitReached) {
+    function poolLiquidityLimit(address asset, uint256 amount) external view returns (bool limitReached) {
         // Check pool liquidity cap if Uniswap oracle is active
         if (assetInfo[asset].poolConfig.active == 1) {
             address pool = assetInfo[asset].poolConfig.pool;
@@ -740,9 +612,7 @@ contract LendefiAssetsV2 is
      * @return Complete Asset struct containing all configuration parameters
      * @custom:validation Asset must be listed in protocol
      */
-    function getAssetInfo(
-        address asset
-    ) external view onlyListedAsset(asset) returns (Asset memory) {
+    function getAssetInfo(address asset) external view onlyListedAsset(asset) returns (Asset memory) {
         return assetInfo[asset];
     }
 
@@ -762,9 +632,7 @@ contract LendefiAssetsV2 is
      * @param tier The collateral tier to query
      * @return The liquidation fee percentage (scaled by 1e6)
      */
-    function getLiquidationFee(
-        CollateralTier tier
-    ) external view returns (uint256) {
+    function getLiquidationFee(CollateralTier tier) external view returns (uint256) {
         return tierConfig[tier].liquidationFee;
     }
 
@@ -774,9 +642,7 @@ contract LendefiAssetsV2 is
      * @return tier The collateral tier classification
      * @custom:validation Asset must be listed
      */
-    function getAssetTier(
-        address asset
-    ) external view onlyListedAsset(asset) returns (CollateralTier tier) {
+    function getAssetTier(address asset) external view onlyListedAsset(asset) returns (CollateralTier tier) {
         return assetInfo[asset].tier;
     }
 
@@ -786,9 +652,7 @@ contract LendefiAssetsV2 is
      * @return The number of decimals (e.g., 18 for ETH)
      * @custom:validation Asset must be listed
      */
-    function getAssetDecimals(
-        address asset
-    ) external view onlyListedAsset(asset) returns (uint8) {
+    function getAssetDecimals(address asset) external view onlyListedAsset(asset) returns (uint8) {
         return assetInfo[asset].decimals;
     }
 
@@ -798,9 +662,7 @@ contract LendefiAssetsV2 is
      * @return The liquidation threshold percentage (scaled by 1e4)
      * @custom:validation Asset must be listed
      */
-    function getAssetLiquidationThreshold(
-        address asset
-    ) external view onlyListedAsset(asset) returns (uint16) {
+    function getAssetLiquidationThreshold(address asset) external view onlyListedAsset(asset) returns (uint16) {
         return assetInfo[asset].liquidationThreshold;
     }
 
@@ -810,9 +672,7 @@ contract LendefiAssetsV2 is
      * @return The borrow threshold percentage (scaled by 1e4)
      * @custom:validation Asset must be listed
      */
-    function getAssetBorrowThreshold(
-        address asset
-    ) external view onlyListedAsset(asset) returns (uint16) {
+    function getAssetBorrowThreshold(address asset) external view onlyListedAsset(asset) returns (uint16) {
         return assetInfo[asset].borrowThreshold;
     }
 
@@ -822,9 +682,7 @@ contract LendefiAssetsV2 is
      * @return The maximum debt cap in asset's native units
      * @custom:validation Asset must be listed
      */
-    function getIsolationDebtCap(
-        address asset
-    ) external view onlyListedAsset(asset) returns (uint256) {
+    function getIsolationDebtCap(address asset) external view onlyListedAsset(asset) returns (uint256) {
         return assetInfo[asset].isolationDebtCap;
     }
 
@@ -834,21 +692,18 @@ contract LendefiAssetsV2 is
      * @param asset Address of the asset to query
      * @return Struct containing price, thresholds and decimals
      */
-    function getAssetCalculationParams(
-        address asset
-    )
+    function getAssetCalculationParams(address asset)
         external
         view
         onlyListedAsset(asset)
         returns (AssetCalculationParams memory)
     {
-        return
-            AssetCalculationParams({
-                price: getAssetPrice(asset),
-                borrowThreshold: assetInfo[asset].borrowThreshold,
-                liquidationThreshold: assetInfo[asset].liquidationThreshold,
-                decimals: assetInfo[asset].decimals
-            });
+        return AssetCalculationParams({
+            price: getAssetPrice(asset),
+            borrowThreshold: assetInfo[asset].borrowThreshold,
+            liquidationThreshold: assetInfo[asset].liquidationThreshold,
+            decimals: assetInfo[asset].decimals
+        });
     }
 
     /**
@@ -859,9 +714,7 @@ contract LendefiAssetsV2 is
      * @custom:oracle-config Sum of chainlinkConfig.active and poolConfig.active
      */
     function getOracleCount(address asset) external view returns (uint256) {
-        return
-            assetInfo[asset].chainlinkConfig.active +
-            assetInfo[asset].poolConfig.active;
+        return assetInfo[asset].chainlinkConfig.active + assetInfo[asset].poolConfig.active;
     }
 
     /**
@@ -869,9 +722,7 @@ contract LendefiAssetsV2 is
      * @param asset The asset address
      * @return The feed address or address(0) if none exists
      */
-    function getPoRFeed(
-        address asset
-    ) external view onlyListedAsset(asset) returns (address) {
+    function getPoRFeed(address asset) external view onlyListedAsset(asset) returns (address) {
         return assetInfo[asset].porFeed;
     }
 
@@ -884,12 +735,7 @@ contract LendefiAssetsV2 is
      * @custom:validation Validates through _validateAssetConfig
      * @custom:validation Performed by _validatePool function
      */
-    function updateUniswapOracle(
-        address asset,
-        address uniswapPool,
-        uint32 twapPeriod,
-        uint8 active
-    )
+    function updateUniswapOracle(address asset, address uniswapPool, uint32 twapPeriod, uint8 active)
         public
         nonZeroAddress(uniswapPool)
         onlyListedAsset(asset)
@@ -900,11 +746,7 @@ contract LendefiAssetsV2 is
         _validatePool(asset, uniswapPool, twapPeriod, active);
 
         // Update Uniswap configuration
-        assetInfo[asset].poolConfig = UniswapPoolConfig({
-            pool: uniswapPool,
-            twapPeriod: twapPeriod,
-            active: active
-        });
+        assetInfo[asset].poolConfig = UniswapPoolConfig({pool: uniswapPool, twapPeriod: twapPeriod, active: active});
 
         // Create a memory copy of the asset configuration to validate
         Asset memory configCopy = assetInfo[asset];
@@ -921,9 +763,7 @@ contract LendefiAssetsV2 is
      * @param asset The asset to get price for
      * @return price The current price of the asset
      */
-    function getAssetPrice(
-        address asset
-    ) public view onlyListedAsset(asset) returns (uint256) {
+    function getAssetPrice(address asset) public view onlyListedAsset(asset) returns (uint256) {
         if (circuitBroken[asset]) {
             revert CircuitBreakerActive(asset);
         }
@@ -960,9 +800,7 @@ contract LendefiAssetsV2 is
      * @custom:example If Chainlink reports $1000 and Uniswap reports $1200:
      *                 deviation = (200 * 100) / 1000 = 20%
      */
-    function checkPriceDeviation(
-        address asset
-    ) public view returns (bool isDeviated, uint256 deviation) {
+    function checkPriceDeviation(address asset) public view returns (bool isDeviated, uint256 deviation) {
         // Load asset info into memory once
 
         uint8 chainlinkActive = assetInfo[asset].chainlinkConfig.active;
@@ -970,11 +808,7 @@ contract LendefiAssetsV2 is
 
         // Check if both oracles are active (must be 2)
         if (chainlinkActive + uniswapActive != 2) {
-            revert NotEnoughValidOracles(
-                asset,
-                2,
-                chainlinkActive + uniswapActive
-            );
+            revert NotEnoughValidOracles(asset, 2, chainlinkActive + uniswapActive);
         }
 
         // Fetch prices
@@ -989,10 +823,7 @@ contract LendefiAssetsV2 is
         deviation = FullMath.mulDiv(priceDelta, 100, minPrice);
 
         // Compare with circuit breaker threshold
-        return (
-            deviation >= mainOracleConfig.circuitBreakerThreshold,
-            deviation
-        );
+        return (deviation >= mainOracleConfig.circuitBreakerThreshold, deviation);
     }
 
     // ==================== INTERNAL FUNCTIONS ====================
@@ -1042,23 +873,14 @@ contract LendefiAssetsV2 is
      * @custom:emits Upgrade event on successful authorization
      * @custom:state-changes Increments version and clears pending upgrade
      */
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyRole(LendefiConstants.UPGRADER_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(LendefiConstants.UPGRADER_ROLE) {
         if (!pendingUpgrade.exists) revert UpgradeNotScheduled();
         if (pendingUpgrade.implementation != newImplementation) {
-            revert ImplementationMismatch(
-                pendingUpgrade.implementation,
-                newImplementation
-            );
+            revert ImplementationMismatch(pendingUpgrade.implementation, newImplementation);
         }
-        if (
-            block.timestamp - pendingUpgrade.scheduledTime <
-            LendefiConstants.UPGRADE_TIMELOCK_DURATION
-        ) {
+        if (block.timestamp - pendingUpgrade.scheduledTime < LendefiConstants.UPGRADE_TIMELOCK_DURATION) {
             revert UpgradeTimelockActive(
-                LendefiConstants.UPGRADE_TIMELOCK_DURATION -
-                    (block.timestamp - pendingUpgrade.scheduledTime)
+                LendefiConstants.UPGRADE_TIMELOCK_DURATION - (block.timestamp - pendingUpgrade.scheduledTime)
             );
         }
 
@@ -1075,13 +897,8 @@ contract LendefiAssetsV2 is
      */
     function _getChainlinkPrice(address asset) internal view returns (uint256) {
         address oracle = assetInfo[asset].chainlinkConfig.oracleUSD;
-        (
-            uint80 roundId,
-            int256 price,
-            ,
-            uint256 timestamp,
-            uint80 answeredInRound
-        ) = AggregatorV3Interface(oracle).latestRoundData();
+        (uint80 roundId, int256 price,, uint256 timestamp, uint80 answeredInRound) =
+            AggregatorV3Interface(oracle).latestRoundData();
 
         // Validate price is positive
         if (price <= 0) {
@@ -1096,20 +913,12 @@ contract LendefiAssetsV2 is
         // Validate timestamp is fresh enough
         uint256 age = block.timestamp - timestamp;
         if (age > mainOracleConfig.freshnessThreshold) {
-            revert OracleTimeout(
-                oracle,
-                timestamp,
-                block.timestamp,
-                mainOracleConfig.freshnessThreshold
-            );
+            revert OracleTimeout(oracle, timestamp, block.timestamp, mainOracleConfig.freshnessThreshold);
         }
 
         // Check for excessive volatility using the new helper function
         uint256 changePercent = _getChainlinkVolatility(asset);
-        if (
-            changePercent >= mainOracleConfig.volatilityPercentage &&
-            age >= mainOracleConfig.volatilityThreshold
-        ) {
+        if (changePercent >= mainOracleConfig.volatilityPercentage && age >= mainOracleConfig.volatilityThreshold) {
             revert OracleInvalidPriceVolatility(oracle, price, changePercent);
         }
 
@@ -1125,20 +934,14 @@ contract LendefiAssetsV2 is
      * @custom:reverts InvalidUniswapConfig if the pool is not configured or inactive
      * @custom:reverts OracleInvalidPrice if the price is invalid or zero
      */
-    function _getUniswapTWAPPrice(
-        address asset
-    ) internal view returns (uint256 tokenPriceInUSD) {
+    function _getUniswapTWAPPrice(address asset) internal view returns (uint256 tokenPriceInUSD) {
         UniswapPoolConfig memory config = assetInfo[asset].poolConfig;
         if (config.pool == address(0) || config.active == 0) {
             revert InvalidUniswapConfig(asset);
         }
 
-        tokenPriceInUSD = getAnyPoolTokenPriceInUSD(
-            config.pool,
-            asset,
-            LendefiConstants.USDC_ETH_POOL,
-            config.twapPeriod
-        ); // Price on 1e6 scale, USDC
+        tokenPriceInUSD =
+            getAnyPoolTokenPriceInUSD(config.pool, asset, LendefiConstants.USDC_ETH_POOL, config.twapPeriod); // Price on 1e6 scale, USDC
 
         if (tokenPriceInUSD <= 0) {
             revert OracleInvalidPrice(config.pool, int256(tokenPriceInUSD));
@@ -1181,58 +984,34 @@ contract LendefiAssetsV2 is
      *   - ETH/USDC price: 2000.00 USD per ETH
      *   - Returned price: 1000000000 (1000.00 * 1e6)
      */
-    function getAnyPoolTokenPriceInUSD(
-        address poolAddress,
-        address token,
-        address ethUsdcPool,
-        uint32 twapPeriod
-    ) internal view returns (uint256 tokenPriceInUSD) {
+    function getAnyPoolTokenPriceInUSD(address poolAddress, address token, address ethUsdcPool, uint32 twapPeriod)
+        internal
+        view
+        returns (uint256 tokenPriceInUSD)
+    {
         // Get the pool instance
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
 
         // Phase 1: Get pool configuration
-        (
-            bool isToken0,
-            uint8 assetDecimals,
-            bool isStablePool
-        ) = getOptimalUniswapConfig(token, pool);
+        (bool isToken0, uint8 assetDecimals, bool isStablePool) = getOptimalUniswapConfig(token, pool);
 
         // Phase 2: Get raw price
         if (isStablePool) {
-            tokenPriceInUSD = UniswapTickMath.getRawPrice(
-                pool,
-                isToken0,
-                10 ** assetDecimals,
-                twapPeriod
-            );
+            tokenPriceInUSD = UniswapTickMath.getRawPrice(pool, isToken0, 10 ** assetDecimals, twapPeriod);
         } else {
             // Get raw price in ETH
-            uint256 rawPrice = UniswapTickMath.getRawPrice(
-                pool,
-                isToken0,
-                10 ** assetDecimals,
-                twapPeriod
-            );
+            uint256 rawPrice = UniswapTickMath.getRawPrice(pool, isToken0, 10 ** assetDecimals, twapPeriod);
 
             IUniswapV3Pool ethUSDCPool = IUniswapV3Pool(ethUsdcPool);
             // ETH is token1 in USDC/ETH pool
-            uint256 ethPriceInUSD = UniswapTickMath.getRawPrice(
-                ethUSDCPool,
-                false,
-                1e18,
-                twapPeriod
-            );
+            uint256 ethPriceInUSD = UniswapTickMath.getRawPrice(ethUSDCPool, false, 1e18, twapPeriod);
 
             // Adjust token/ETH price to account for token decimals
             uint256 adjustedPrice = rawPrice / (10 ** (18 - assetDecimals)); // Scale to 1e6 precision
 
             // Dynamically normalize the final price based on token decimals
             uint256 normalizationFactor = 10 ** assetDecimals;
-            tokenPriceInUSD = FullMath.mulDiv(
-                adjustedPrice,
-                ethPriceInUSD,
-                normalizationFactor
-            );
+            tokenPriceInUSD = FullMath.mulDiv(adjustedPrice, ethPriceInUSD, normalizationFactor);
         }
     }
 
@@ -1248,10 +1027,7 @@ contract LendefiAssetsV2 is
      * @custom:pricing-impact Token position affects price calculation direction (token0/token1 vs token1/token0)
      * @custom:reverts AssetNotInUniswapPool if the asset is not present in the pool
      */
-    function getOptimalUniswapConfig(
-        address asset,
-        IUniswapV3Pool pool
-    )
+    function getOptimalUniswapConfig(address asset, IUniswapV3Pool pool)
         internal
         view
         returns (bool isToken0, uint8 assetDecimals, bool isStablePool)
@@ -1261,8 +1037,9 @@ contract LendefiAssetsV2 is
         address token1 = pool.token1();
 
         // Verify the asset is in the pool
-        if (asset != token0 && asset != token1)
+        if (asset != token0 && asset != token1) {
             revert AssetNotInUniswapPool(asset, address(pool));
+        }
 
         // Determine if asset is token0
         isToken0 = (asset == token0);
@@ -1292,12 +1069,7 @@ contract LendefiAssetsV2 is
      * @custom:reverts InvalidParameter if active parameter is not 0 or 1
      * @custom:reverts NotEnoughValidOracles if deactivation would violate minimum oracle requirement
      */
-    function _validatePool(
-        address asset,
-        address uniswapPool,
-        uint32 twapPeriod,
-        uint8 active
-    ) internal view {
+    function _validatePool(address asset, address uniswapPool, uint32 twapPeriod, uint8 active) internal view {
         // Validate that the asset is in the pool
         IUniswapV3Pool pool = IUniswapV3Pool(uniswapPool);
         address token0 = pool.token0();
@@ -1318,16 +1090,16 @@ contract LendefiAssetsV2 is
         }
 
         // Check minimum oracle requirements if we're deactivating this oracle
-        if (
-            active == 0 &&
-            assetInfo[asset].chainlinkConfig.active == 0 &&
-            assetInfo[asset].assetMinimumOracles >= 1
-        ) {
-            revert NotEnoughValidOracles(
-                asset,
-                assetInfo[asset].assetMinimumOracles,
-                0
-            );
+        if (active == 0 && assetInfo[asset].chainlinkConfig.active == 0 && assetInfo[asset].assetMinimumOracles >= 1) {
+            revert NotEnoughValidOracles(asset, assetInfo[asset].assetMinimumOracles, 0);
+        }
+
+        // On Ethereum mainnet, ensure pool contains USDC or WETH for pricing
+        if (block.chainid == LendefiConstants.ETHEREUM_CHAIN_ID) {
+            address otherToken = asset == token0 ? token1 : token0;
+            if (otherToken != LendefiConstants.ETHEREUM_USDC && otherToken != LendefiConstants.ETHEREUM_WETH) {
+                revert InvalidParameter("pool", uint256(uint160(uniswapPool)));
+            }
         }
     }
 
@@ -1342,26 +1114,13 @@ contract LendefiAssetsV2 is
      * @custom:example If current price is $1200 and previous was $1000:
      *                 volatilityPct = (|1200 - 1000| * 100) / 1000 = 20%
      */
-    function _getChainlinkVolatility(
-        address asset
-    ) internal view returns (uint256) {
+    function _getChainlinkVolatility(address asset) internal view returns (uint256) {
         address oracle = assetInfo[asset].chainlinkConfig.oracleUSD;
-        (uint80 roundId, int256 price, , , ) = AggregatorV3Interface(oracle)
-            .latestRoundData();
+        (uint80 roundId, int256 price,,,) = AggregatorV3Interface(oracle).latestRoundData();
         if (roundId <= 1) return 0;
-        (
-            ,
-            int256 previousPrice,
-            ,
-            uint256 previousTimestamp,
-
-        ) = AggregatorV3Interface(oracle).getRoundData(roundId - 1);
+        (, int256 previousPrice,, uint256 previousTimestamp,) = AggregatorV3Interface(oracle).getRoundData(roundId - 1);
         if (previousPrice <= 0 || previousTimestamp == 0) return 0;
-        uint256 priceDelta = uint256(
-            price > previousPrice
-                ? price - previousPrice
-                : previousPrice - price
-        );
+        uint256 priceDelta = uint256(price > previousPrice ? price - previousPrice : previousPrice - price);
         return FullMath.mulDiv(priceDelta, 100, uint256(previousPrice));
     }
 
@@ -1387,29 +1146,19 @@ contract LendefiAssetsV2 is
      * - Economic attacks on the lending protocol
      * @custom:reverts Multiple error types based on the specific validation failure
      */
-    function _validateAssetConfig(
-        address asset,
-        Asset memory config
-    ) internal pure {
+    function _validateAssetConfig(address asset, Asset memory config) internal pure {
         // Basic validation
-        if (config.chainlinkConfig.oracleUSD == address(0))
+        if (config.chainlinkConfig.oracleUSD == address(0)) {
             revert ZeroAddressNotAllowed();
+        }
         // Validate active parameter (must be 0 or 1)
         if (config.chainlinkConfig.active > 1) {
-            revert InvalidParameter(
-                "chainlink active",
-                config.chainlinkConfig.active
-            );
+            revert InvalidParameter("chainlink active", config.chainlinkConfig.active);
         }
 
-        if (
-            config.chainlinkConfig.active + config.poolConfig.active <
-            config.assetMinimumOracles
-        ) {
+        if (config.chainlinkConfig.active + config.poolConfig.active < config.assetMinimumOracles) {
             revert NotEnoughValidOracles(
-                asset,
-                config.assetMinimumOracles,
-                config.chainlinkConfig.active + config.poolConfig.active
+                asset, config.assetMinimumOracles, config.chainlinkConfig.active + config.poolConfig.active
             );
         }
 
@@ -1427,17 +1176,11 @@ contract LendefiAssetsV2 is
         }
 
         // Threshold validations
-        if (
-            config.liquidationThreshold >
-            LendefiConstants.MAX_LIQUIDATION_THRESHOLD
-        ) {
+        if (config.liquidationThreshold > LendefiConstants.MAX_LIQUIDATION_THRESHOLD) {
             revert InvalidLiquidationThreshold(config.liquidationThreshold);
         }
 
-        if (
-            config.borrowThreshold >
-            config.liquidationThreshold - LendefiConstants.MIN_THRESHOLD_SPREAD
-        ) {
+        if (config.borrowThreshold > config.liquidationThreshold - LendefiConstants.MIN_THRESHOLD_SPREAD) {
             revert InvalidBorrowThreshold(config.borrowThreshold);
         }
 
@@ -1456,10 +1199,7 @@ contract LendefiAssetsV2 is
         }
 
         // For isolated assets, check debt cap
-        if (
-            config.tier == CollateralTier.ISOLATED &&
-            config.isolationDebtCap == 0
-        ) {
+        if (config.tier == CollateralTier.ISOLATED && config.isolationDebtCap == 0) {
             revert InvalidParameter("isolationDebtCap", 0);
         }
     }

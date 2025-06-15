@@ -103,6 +103,13 @@ contract BasicDeploy is Test {
     IERC20 usdtInstance = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7); //real usdt ethereum for fork testing
     IERC20 usd1Instance = IERC20(0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d); //real usd1 ethereum for fork testing
 
+    function getNetworkAddresses() internal pure returns (address networkUSDC, address networkWETH, address UsdcWethPool) {
+        // Fork tests run on Ethereum mainnet, so use LendefiConstants addresses
+        networkUSDC = LendefiConstants.ETHEREUM_USDC;
+        networkWETH = LendefiConstants.ETHEREUM_WETH;
+        UsdcWethPool = LendefiConstants.USDC_WETH_POOL;
+    }
+
     function deployTokenUpgrade() internal {
         if (address(timelockInstance) == address(0)) {
             _deployTimelock();
@@ -720,6 +727,10 @@ contract BasicDeploy is Test {
         }
 
         porFeedImplementation = new LendefiPoRFeed();
+        
+        // Get network-specific addresses
+        (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
+        
         // Protocol Oracle deploy (combined Oracle + Assets)
         bytes memory data = abi.encodeCall(
             LendefiAssets.initialize,
@@ -727,7 +738,10 @@ contract BasicDeploy is Test {
                 address(timelockInstance),
                 charlie,
                 address(porFeedImplementation),
-                address(0)
+                address(0),
+                networkUSDC,
+                networkWETH,
+                UsdcWethPool
             )
         );
 
@@ -943,6 +957,9 @@ contract BasicDeploy is Test {
         LendefiAssets assetsImpl = new LendefiAssets(); // Assets implementation for cloning
         LendefiPoRFeed porFeedImpl = new LendefiPoRFeed();
 
+        // Get network-specific addresses
+        (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
+        
         // Deploy factory using UUPS pattern with direct proxy deployment
         bytes memory factoryData = abi.encodeCall(
             LendefiMarketFactory.initialize,
@@ -950,7 +967,10 @@ contract BasicDeploy is Test {
                 address(timelockInstance),
                 address(tokenInstance),
                 gnosisSafe,
-                address(ecoInstance)
+                address(ecoInstance),
+                networkUSDC,
+                networkWETH,
+                UsdcWethPool
             )
         );
         address payable factoryProxy = payable(

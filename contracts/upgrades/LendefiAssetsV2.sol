@@ -816,11 +816,7 @@ contract LendefiAssetsV2 is
         uint256 price2 = _getUniswapTWAPPrice(asset);
 
         // Calculate deviation
-        uint256 minPrice = price1 < price2 ? price1 : price2;
-        uint256 maxPrice = price1 > price2 ? price1 : price2;
-        uint256 priceDelta = maxPrice - minPrice;
-
-        deviation = FullMath.mulDiv(priceDelta, 100, minPrice);
+        deviation = _calculatePriceDeviation(price1, price2);
 
         // Compare with circuit breaker threshold
         return (deviation >= mainOracleConfig.circuitBreakerThreshold, deviation);
@@ -1027,19 +1023,43 @@ contract LendefiAssetsV2 is
      * @custom:pricing-impact Token position affects price calculation direction (token0/token1 vs token1/token0)
      * @custom:reverts AssetNotInUniswapPool if the asset is not present in the pool
      */
+    /**
+     * @notice Validates that an asset is present in a Uniswap V3 pool
+     * @param asset The address of the asset to validate
+     * @param poolAddress The address of the Uniswap V3 pool
+     * @return token0 The address of token0 in the pool
+     * @return token1 The address of token1 in the pool
+     * @custom:reverts AssetNotInUniswapPool if the asset is not present in the pool
+     */
+    function _validateAssetInPool(address asset, address poolAddress)
+        internal
+        view
+        returns (address token0, address token1)
+    {
+        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
+        token0 = pool.token0();
+        token1 = pool.token1();
+
+        if (asset != token0 && asset != token1) {
+            revert AssetNotInUniswapPool(asset, poolAddress);
+        }
+    }
+
+    /**
+     * @notice Determines the optimal configuration for a Uniswap V3 pool
+     * @param asset The address of the asset to configure
+     * @param pool The Uniswap V3 pool instance
+     * @return isToken0 True if the asset is token0 in the pool, false if token1
+     * @return assetDecimals The number of decimal places for the asset
+     * @return isStablePool True if the pool contains a 6-decimal stablecoin
+     */
     function getOptimalUniswapConfig(address asset, IUniswapV3Pool pool)
         internal
         view
         returns (bool isToken0, uint8 assetDecimals, bool isStablePool)
     {
-        // Get pool tokens
-        address token0 = pool.token0();
-        address token1 = pool.token1();
-
-        // Verify the asset is in the pool
-        if (asset != token0 && asset != token1) {
-            revert AssetNotInUniswapPool(asset, address(pool));
-        }
+        // Validate asset is in pool and get tokens
+        (address token0, address token1) = _validateAssetInPool(asset, address(pool));
 
         // Determine if asset is token0
         isToken0 = (asset == token0);
@@ -1071,13 +1091,7 @@ contract LendefiAssetsV2 is
      */
     function _validatePool(address asset, address uniswapPool, uint32 twapPeriod, uint8 active) internal view {
         // Validate that the asset is in the pool
-        IUniswapV3Pool pool = IUniswapV3Pool(uniswapPool);
-        address token0 = pool.token0();
-        address token1 = pool.token1();
-
-        if (asset != token0 && asset != token1) {
-            revert AssetNotInUniswapPool(asset, uniswapPool);
-        }
+        (address token0, address token1) = _validateAssetInPool(asset, uniswapPool);
 
         // Validate TWAP period (between 15 minutes and 30 minutes)
         if (twapPeriod < 900 || twapPeriod > 1800) {
@@ -1096,8 +1110,9 @@ contract LendefiAssetsV2 is
 
         // On Ethereum mainnet, ensure pool contains USDC or WETH for pricing
         if (block.chainid == LendefiConstants.ETHEREUM_CHAIN_ID) {
-            bool hasValidPairing = (token0 == LendefiConstants.ETHEREUM_USDC || token0 == LendefiConstants.ETHEREUM_WETH) ||
-                                  (token1 == LendefiConstants.ETHEREUM_USDC || token1 == LendefiConstants.ETHEREUM_WETH);
+            bool hasValidPairing = (
+                token0 == LendefiConstants.ETHEREUM_USDC || token0 == LendefiConstants.ETHEREUM_WETH
+            ) || (token1 == LendefiConstants.ETHEREUM_USDC || token1 == LendefiConstants.ETHEREUM_WETH);
             if (!hasValidPairing) {
                 revert InvalidParameter("pool", uint256(uint160(uniswapPool)));
             }
@@ -1115,14 +1130,26 @@ contract LendefiAssetsV2 is
      * @custom:example If current price is $1200 and previous was $1000:
      *                 volatilityPct = (|1200 - 1000| * 100) / 1000 = 20%
      */
+    /**
+     * @notice Calculates percentage deviation between two prices
+     * @param price1 First price value
+     * @param price2 Second price value
+     * @return deviation Percentage deviation (basis points)
+     */
+    function _calculatePriceDeviation(uint256 price1, uint256 price2) internal pure returns (uint256 deviation) {
+        uint256 minPrice = price1 < price2 ? price1 : price2;
+        uint256 maxPrice = price1 > price2 ? price1 : price2;
+        uint256 priceDelta = maxPrice - minPrice;
+        return FullMath.mulDiv(priceDelta, 100, minPrice);
+    }
+
     function _getChainlinkVolatility(address asset) internal view returns (uint256) {
         address oracle = assetInfo[asset].chainlinkConfig.oracleUSD;
         (uint80 roundId, int256 price,,,) = AggregatorV3Interface(oracle).latestRoundData();
         if (roundId <= 1) return 0;
         (, int256 previousPrice,, uint256 previousTimestamp,) = AggregatorV3Interface(oracle).getRoundData(roundId - 1);
         if (previousPrice <= 0 || previousTimestamp == 0) return 0;
-        uint256 priceDelta = uint256(price > previousPrice ? price - previousPrice : previousPrice - price);
-        return FullMath.mulDiv(priceDelta, 100, uint256(previousPrice));
+        return _calculatePriceDeviation(uint256(price), uint256(previousPrice));
     }
 
     /**

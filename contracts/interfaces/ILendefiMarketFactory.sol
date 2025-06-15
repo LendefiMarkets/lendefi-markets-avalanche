@@ -149,12 +149,18 @@ interface ILendefiMarketFactory {
      * @param _govToken Address of the protocol governance token
      * @param _multisig Address of the multisig wallet
      * @param _ecosystem Address of the ecosystem contract for rewards
+     * @param _networkUSDC Network-specific USDC address for oracle validation
+     * @param _networkWETH Network-specific WETH address for oracle validation
+     * @param _UsdcWethPool Network-specific USDC/WETH pool for price reference
      */
     function initialize(
         address _timelock,
         address _govToken,
         address _multisig,
-        address _ecosystem
+        address _ecosystem,
+        address _networkUSDC,
+        address _networkWETH,
+        address _UsdcWethPool
     ) external;
 
     // ========== ADMIN FUNCTIONS ==========

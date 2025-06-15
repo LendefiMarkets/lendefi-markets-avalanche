@@ -17,9 +17,9 @@ contract USD1ForkTest is BasicDeploy {
     address constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address constant LINK = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
 
-    // Pools and oracles - Using USD1 pools
+    // Pools and oracles - Using pools that contain USDC or WETH
     address constant LINK_WETH_POOL = 0xa6Cc3C2531FdaA6Ae1A3CA84c2855806728693e8;
-    address constant WBTC_USD1_POOL = 0x9Db9e0e53058C89e5B94e29621a205198648425B;
+    address constant WBTC_WETH_POOL = 0xCBCdF9626bC03E24f779434178A73a0B4bad62eD; // WBTC/WETH pool instead
     address constant WETH_USD1_POOL = 0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36;
     address constant USD1_USDC_POOL = 0x1e1DfFf79d95725aaAFD6b47aF4fbc28D859ce28;
 
@@ -122,7 +122,7 @@ contract USD1ForkTest is BasicDeploy {
                 primaryOracleType: IASSETS.OracleType.UNISWAP_V3_TWAP,
                 tier: IASSETS.CollateralTier.CROSS_A,
                 chainlinkConfig: IASSETS.ChainlinkOracleConfig({oracleUSD: WBTC_CHAINLINK_ORACLE, active: 0}),
-                poolConfig: IASSETS.UniswapPoolConfig({pool: WBTC_USD1_POOL, twapPeriod: 1800, active: 1})
+                poolConfig: IASSETS.UniswapPoolConfig({pool: WBTC_WETH_POOL, twapPeriod: 1800, active: 1})
             })
         );
 

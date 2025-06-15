@@ -55,6 +55,12 @@ contract LendefiAssetsV2 is
     /// @notice Address of the timelock contract
     address public timelock;
 
+    /// @notice Network-specific addresses for oracle validation
+    /// @dev Set during initialization to support different networks
+    address public networkUSDC;
+    address public networkWETH;
+    address public UsdcWethPool;
+
     /// @notice Information about the currently pending upgrade request
     /// @dev Stores implementation address and scheduling details
     UpgradeRequest public pendingUpgrade;
@@ -85,7 +91,7 @@ contract LendefiAssetsV2 is
 
     /// @notice Reserved storage gap for future upgrades
     /// @dev Required by OpenZeppelin's upgradeable contracts pattern
-    uint256[22] private __gap;
+    uint256[19] private __gap;
 
     /**
      * @notice Requires that the asset exists in the protocol's listed assets
@@ -134,12 +140,18 @@ contract LendefiAssetsV2 is
      * - circuitBreakerThreshold: 50%
      * @custom:version Sets initial contract version to 1
      */
-    function initialize(address timelock_, address marketOwner, address porFeed_, address coreAddress_)
-        external
-        initializer
-    {
+    function initialize(
+        address timelock_,
+        address marketOwner,
+        address porFeed_,
+        address coreAddress_,
+        address networkUSDC_,
+        address networkWETH_,
+        address UsdcWethPool_
+    ) external initializer {
         if (
             timelock_ == address(0) || marketOwner == address(0) || porFeed_ == address(0) || coreAddress_ == address(0)
+                || networkUSDC_ == address(0) || networkWETH_ == address(0) || UsdcWethPool_ == address(0)
         ) {
             revert ZeroAddressNotAllowed();
         }
@@ -170,6 +182,11 @@ contract LendefiAssetsV2 is
         coreAddress = coreAddress_;
         lendefiInstance = IPROTOCOL(coreAddress_);
         _grantRole(LendefiConstants.PROTOCOL_ROLE, coreAddress_);
+
+        // Set network-specific addresses
+        networkUSDC = networkUSDC_;
+        networkWETH = networkWETH_;
+        UsdcWethPool = UsdcWethPool_;
 
         timelock = timelock_;
         version = 1;

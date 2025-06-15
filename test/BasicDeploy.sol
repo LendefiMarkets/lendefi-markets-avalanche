@@ -102,7 +102,7 @@ contract BasicDeploy is Test {
     // IERC20 usdcInstance = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); //real usdc ethereum for fork testing
 
     // ==================== DYNAMIC AMOUNT HELPERS ====================
-    
+
     /**
      * @notice Helper function to get USDC amount scaled to its actual decimals
      * @param baseAmount The base amount (e.g., 1000 for 1000 USDC)
@@ -114,7 +114,7 @@ contract BasicDeploy is Test {
         }
         return baseAmount * 10 ** usdcInstance.decimals();
     }
-    
+
     /**
      * @notice Helper function to get a scaled amount for any ERC20 token
      * @param token The token address
@@ -586,8 +586,7 @@ contract BasicDeploy is Test {
         porFeedImplementation = new LendefiPoRFeed();
         // Protocol Oracle deploy (combined Oracle + Assets)
         bytes memory data = abi.encodeCall(
-            LendefiAssets.initialize,
-            (address(timelockInstance), charlie, address(porFeedImplementation))
+            LendefiAssets.initialize, (address(timelockInstance), charlie, address(porFeedImplementation), ethereum)
         );
 
         address payable proxy = payable(Upgrades.deployUUPSProxy("LendefiAssets.sol", data));
@@ -657,14 +656,20 @@ contract BasicDeploy is Test {
         // Assert that upgrade was successful
         assertEq(assetsInstanceV2.version(), 2, "Version not incremented to 2");
         assertFalse(implAddressV2 == implAddressV1, "Implementation address didn't change");
-        assertTrue(assetsInstanceV2.hasRole(UPGRADER_ROLE, address(timelockInstance)), "Timelock should retain UPGRADER_ROLE");
+        assertTrue(
+            assetsInstanceV2.hasRole(UPGRADER_ROLE, address(timelockInstance)), "Timelock should retain UPGRADER_ROLE"
+        );
 
         // Test role management still works
         vm.startPrank(address(timelockInstance));
         assetsInstanceV2.revokeRole(UPGRADER_ROLE, address(timelockInstance));
-        assertFalse(assetsInstanceV2.hasRole(UPGRADER_ROLE, address(timelockInstance)), "Role should be revoked successfully");
+        assertFalse(
+            assetsInstanceV2.hasRole(UPGRADER_ROLE, address(timelockInstance)), "Role should be revoked successfully"
+        );
         assetsInstance.grantRole(UPGRADER_ROLE, address(timelockInstance));
-        assertTrue(assetsInstanceV2.hasRole(UPGRADER_ROLE, address(timelockInstance)), "Timelock should have UPGRADER_ROLE");
+        assertTrue(
+            assetsInstanceV2.hasRole(UPGRADER_ROLE, address(timelockInstance)), "Timelock should have UPGRADER_ROLE"
+        );
         vm.stopPrank();
     }
 
@@ -814,7 +819,6 @@ contract BasicDeploy is Test {
         // Grant necessary roles
         vm.startPrank(address(timelockInstance));
         ecoInstance.grantRole(REWARDER_ROLE, address(marketCoreInstance));
-        assetsInstance.setCoreAddress(address(marketCoreInstance));
         // Grant market owner MANAGER_ROLE on vault (since factory can't do it without DEFAULT_ADMIN_ROLE)
         marketVaultInstance.grantRole(LendefiConstants.MANAGER_ROLE, charlie);
         vm.stopPrank();

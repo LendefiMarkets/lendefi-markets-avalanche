@@ -51,4 +51,10 @@ library LendefiConstants {
 
     /// @notice Ethereum mainnet WETH token address
     address internal constant ETHEREUM_WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    /// @notice Ethereum mainnet USDT token address
+    address internal constant ETHEREUM_USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+
+    /// @notice Ethereum mainnet USDC/WETH Uniswap V3 pool address
+    address internal constant USDC_WETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
 }

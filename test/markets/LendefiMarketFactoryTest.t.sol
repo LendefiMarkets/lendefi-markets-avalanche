@@ -72,18 +72,20 @@ contract LendefiMarketFactoryTest is BasicDeploy {
     }
 
     function test_Revert_FactoryInitializeTwice() public {
+        (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
         vm.expectRevert();
         marketFactoryInstance.initialize(
-            address(timelockInstance), address(tokenInstance), address(0), address(ecoInstance)
+            address(timelockInstance), address(tokenInstance), address(0), address(ecoInstance), networkUSDC, networkWETH, UsdcWethPool
         );
     }
 
     function test_Revert_FactoryInitializeZeroAddress() public {
         LendefiMarketFactory newFactory = new LendefiMarketFactory();
+        (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
 
         // The factory uses InvalidInitialization when admin is zero
         vm.expectRevert();
-        newFactory.initialize(address(0), address(tokenInstance), address(0), address(ecoInstance));
+        newFactory.initialize(address(0), address(tokenInstance), address(0), address(ecoInstance), networkUSDC, networkWETH, UsdcWethPool);
     }
 
     // ============ Implementation Management Tests ============

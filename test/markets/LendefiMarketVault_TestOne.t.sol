@@ -44,7 +44,7 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
 
         // Deploy complete system
         deployMarketsWithUSDC();
-        
+
         // Set dynamic amounts
         INITIAL_DEPOSIT = getUSDCAmount(100_000);
         BORROW_AMOUNT = getUSDCAmount(50_000);
@@ -109,7 +109,8 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
         ecoInstance.grantRole(REWARDER_ROLE, address(marketVaultInstance));
 
         // Initialize reward parameters via timelock using the config approach
-        ILendefiMarketVault.ProtocolConfig memory config = ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
+        ILendefiMarketVault.ProtocolConfig memory config =
+            ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
 
         // Update specific parameters while keeping others
         config.rewardAmount = 1_000e18; // Set target reward to 1000 tokens
@@ -173,7 +174,7 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
         (bool upkeepNeeded, bytes memory performData) = marketVaultInstance.checkUpkeep("");
 
         assertTrue(upkeepNeeded, "Upkeep should be needed after interval");
-        assertEq(performData, "0x00", "Perform data should be empty");
+        assertEq(performData, "", "Perform data should be empty");
     }
 
     function test_CheckUpkeep_WhenIntervalNotPassed() public {
@@ -182,7 +183,7 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
         (bool upkeepNeeded, bytes memory performData) = marketVaultInstance.checkUpkeep("");
 
         assertFalse(upkeepNeeded, "Upkeep should not be needed before interval");
-        assertEq(performData, "0x00", "Perform data should be empty");
+        assertEq(performData, "", "Perform data should be empty");
     }
 
     function test_PerformUpkeep_UpdatesStateWhenIntervalPassed() public {
@@ -227,7 +228,8 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
 
     function test_IsRewardable_SufficientBalanceAndTime() public {
         // Get the updated config
-        ILendefiMarketVault.ProtocolConfig memory config = ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
+        ILendefiMarketVault.ProtocolConfig memory config =
+            ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
 
         // Charlie deposits enough to meet threshold
         uint256 charlieDeposit = getUSDCAmount(150_000); // More than 100k threshold
@@ -257,7 +259,8 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
 
     function test_ClaimReward_EligibleUser() public {
         // Get the updated config
-        ILendefiMarketVault.ProtocolConfig memory config = ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
+        ILendefiMarketVault.ProtocolConfig memory config =
+            ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
 
         // Charlie deposits enough to meet threshold
         uint256 charlieDeposit2 = getUSDCAmount(150_000);
@@ -383,8 +386,12 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
         uint256 availableLiquidity = usdcInstance.balanceOf(address(marketVaultInstance));
         console2.log("Credit limit:", creditLimit / 10 ** usdcInstance.decimals(), "USDC");
         console2.log("Available liquidity in vault:", availableLiquidity / 10 ** usdcInstance.decimals(), "USDC");
-        console2.log("Initial vault totalBorrow:", marketVaultInstance.totalBorrow() / 10 ** usdcInstance.decimals(), "USDC");
-        console2.log("Initial vault totalBase:", marketVaultInstance.totalBase() / 10 ** usdcInstance.decimals(), "USDC");
+        console2.log(
+            "Initial vault totalBorrow:", marketVaultInstance.totalBorrow() / 10 ** usdcInstance.decimals(), "USDC"
+        );
+        console2.log(
+            "Initial vault totalBase:", marketVaultInstance.totalBase() / 10 ** usdcInstance.decimals(), "USDC"
+        );
 
         // Borrow the entire available liquidity (should be 50k USDC from initial setup)
         uint256 borrowAmount = availableLiquidity;
@@ -399,8 +406,12 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
 
         // Verify the vault is now empty (all liquidity borrowed)
         uint256 vaultBalanceAfterBorrow = usdcInstance.balanceOf(address(marketVaultInstance));
-        console2.log("Vault USDC balance after borrow:", vaultBalanceAfterBorrow / 10 ** usdcInstance.decimals(), "USDC");
-        console2.log("Vault totalBorrow after:", marketVaultInstance.totalBorrow() / 10 ** usdcInstance.decimals(), "USDC");
+        console2.log(
+            "Vault USDC balance after borrow:", vaultBalanceAfterBorrow / 10 ** usdcInstance.decimals(), "USDC"
+        );
+        console2.log(
+            "Vault totalBorrow after:", marketVaultInstance.totalBorrow() / 10 ** usdcInstance.decimals(), "USDC"
+        );
         console2.log("Vault totalBase after:", marketVaultInstance.totalBase() / 10 ** usdcInstance.decimals(), "USDC");
         assertEq(vaultBalanceAfterBorrow, 0, "Vault should be empty");
 
@@ -438,7 +449,11 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
         uint256 collateralValueAfter = (collateralAmount * 500) / 1e18; // $500 per ETH
         console2.log("Collateral value after price drop (in USD):", collateralValueAfter);
         console2.log("Total borrowed:", borrowAmount / 10 ** usdcInstance.decimals(), "USDC");
-        console2.log("Collateral coverage ratio:", (collateralValueAfter * 100) / (borrowAmount / 10 ** usdcInstance.decimals()), "%");
+        console2.log(
+            "Collateral coverage ratio:",
+            (collateralValueAfter * 100) / (borrowAmount / 10 ** usdcInstance.decimals()),
+            "%"
+        );
 
         // Advance time to pass the performUpkeep interval
         uint256 interval = marketVaultInstance.interval();
@@ -454,7 +469,9 @@ contract LendefiMarketVault_TestOne is BasicDeploy {
         console2.log("totalAssetValue (USDC decimals):", totalAssetValue / 10 ** usdcInstance.decimals());
 
         console2.log("Total supply:", totalSupply / 10 ** usdcInstance.decimals(), "shares");
-        console2.log("Total assets in vault:", marketVaultInstance.totalAssets() / 10 ** usdcInstance.decimals(), "USDC");
+        console2.log(
+            "Total assets in vault:", marketVaultInstance.totalAssets() / 10 ** usdcInstance.decimals(), "USDC"
+        );
         console2.log("Total borrow:", marketVaultInstance.totalBorrow() / 10 ** usdcInstance.decimals(), "USDC");
 
         // Let's check what the TVL calculation includes

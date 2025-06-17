@@ -11,8 +11,8 @@ library LendefiConstants {
     /// @notice Standard decimals for percentage calculations (1e6 = 100%)
     uint256 internal constant WAD = 1e6;
 
-    /// @notice Address of the Uniswap V3 USDC/ETH pool with 0.05% fee tier
-    address internal constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
+    /// @notice Address of the Uniswap V3 AVAX/USDC pool on Avalanche (token0=AVAX, token1=USDC)
+    address internal constant USDC_AVAX_POOL = 0xfAe3f424a0a47706811521E3ee268f00cFb5c45E;
 
     /// @notice Role identifier for users authorized to pause/unpause the protocol
     bytes32 internal constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -41,18 +41,18 @@ library LendefiConstants {
     /// @notice Max assets supported by platform
     uint32 internal constant MAX_ASSETS = 3000;
 
-    /// @notice Ethereum mainnet chain ID
-    uint256 internal constant ETHEREUM_CHAIN_ID = 1;
+    /// @notice Avalanche mainnet chain ID
+    uint256 internal constant AVALANCHE_CHAIN_ID = 43114;
 
-    /// @notice Ethereum mainnet USDC token address
-    address internal constant ETHEREUM_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    /// @notice Avalanche mainnet USDC token address
+    address internal constant AVALANCHE_USDC = 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E;
 
-    /// @notice Ethereum mainnet WETH token address
-    address internal constant ETHEREUM_WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    /// @notice Avalanche mainnet WAVAX token address
+    address internal constant AVALANCHE_WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
-    /// @notice Ethereum mainnet USDT token address
-    address internal constant ETHEREUM_USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    /// @notice Avalanche mainnet USDT token address
+    address internal constant AVALANCHE_USDT = 0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7;
 
-    /// @notice Ethereum mainnet USDC/WETH Uniswap V3 pool address
-    address internal constant USDC_WETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
+    /// @notice Avalanche mainnet AVAX/USDC Uniswap V3 pool address
+    address internal constant AVAX_USDC_POOL = 0xfAe3f424a0a47706811521E3ee268f00cFb5c45E;
 }

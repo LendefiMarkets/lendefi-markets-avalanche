@@ -171,10 +171,7 @@ contract USD1ForkTest is BasicDeploy {
                 porFeed: address(0),
                 primaryOracleType: IASSETS.OracleType.UNISWAP_V3_TWAP,
                 tier: IASSETS.CollateralTier.STABLE,
-                chainlinkConfig: IASSETS.ChainlinkOracleConfig({
-                    oracleUSD: USD1_CHAINLINK_ORACLE,
-                    active: 0
-                }),
+                chainlinkConfig: IASSETS.ChainlinkOracleConfig({oracleUSD: USD1_CHAINLINK_ORACLE, active: 0}),
                 poolConfig: IASSETS.UniswapPoolConfig({pool: USD1_USDC_POOL, twapPeriod: 1800, active: 1})
             })
         );

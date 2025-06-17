@@ -10,10 +10,14 @@ pragma solidity 0.8.23;
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
-import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import {ERC20VotesUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
-import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {ERC20BurnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {ERC20PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20VotesUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
+import {ERC20PermitUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -103,21 +107,14 @@ contract GovernanceTokenV2 is
      * @param oldMaxBridge Previous maximum bridge amount
      * @param newMaxBridge New maximum bridge amount
      */
-    event MaxBridgeUpdated(
-        address indexed admin,
-        uint256 oldMaxBridge,
-        uint256 newMaxBridge
-    );
+    event MaxBridgeUpdated(address indexed admin, uint256 oldMaxBridge, uint256 newMaxBridge);
 
     /**
      * @dev Emitted when a bridge role is assigned
      * @param admin The admin who set the role
      * @param rounterAddress The bridge address receiving the role
      */
-    event BridgeRoleAssigned(
-        address indexed admin,
-        address indexed rounterAddress
-    );
+    event BridgeRoleAssigned(address indexed admin, address indexed rounterAddress);
 
     /**
      * @dev Emitted when an upgrade is scheduled
@@ -127,10 +124,7 @@ contract GovernanceTokenV2 is
      * @param effectiveTime The time when the upgrade can be executed
      */
     event UpgradeScheduled(
-        address indexed sender,
-        address indexed implementation,
-        uint64 scheduledTime,
-        uint64 effectiveTime
+        address indexed sender, address indexed implementation, uint64 scheduledTime, uint64 effectiveTime
     );
 
     /**
@@ -138,10 +132,7 @@ contract GovernanceTokenV2 is
      * @param canceller The address that cancelled the upgrade
      * @param implementation The implementation address that was cancelled
      */
-    event UpgradeCancelled(
-        address indexed canceller,
-        address indexed implementation
-    );
+    event UpgradeCancelled(address indexed canceller, address indexed implementation);
 
     /**
      * @dev Upgrade Event.
@@ -155,10 +146,7 @@ contract GovernanceTokenV2 is
      * @param previousAdmin The address that previously held the CCIPAdmin role
      * @param newAdmin The address that now holds the CCIPAdmin role
      */
-    event CCIPAdminTransferred(
-        address indexed previousAdmin,
-        address indexed newAdmin
-    );
+    event CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin);
 
     // ============ Errors ============
 
@@ -234,10 +222,7 @@ contract GovernanceTokenV2 is
      * @custom:events-emits {Initialized} event.
      * @custom:throws ZeroAddress if any address is zero.
      */
-    function initializeUUPS(
-        address guardian,
-        address timelock
-    ) external initializer {
+    function initializeUUPS(address guardian, address timelock) external initializer {
         if (guardian == address(0) || timelock == address(0)) {
             revert ZeroAddress();
         }
@@ -294,12 +279,11 @@ contract GovernanceTokenV2 is
      * @custom:throws ZeroAmount if newMaxBridge is zero
      * @custom:throws ValidationFailed if bridge amount is too high
      */
-    function updateMaxBridgeAmount(
-        uint256 newMaxBridge
-    ) external nonZeroAmount(newMaxBridge) onlyRole(MANAGER_ROLE) {
+    function updateMaxBridgeAmount(uint256 newMaxBridge) external nonZeroAmount(newMaxBridge) onlyRole(MANAGER_ROLE) {
         // Add a reasonable cap, e.g., 1% of initial supply
-        if (newMaxBridge > initialSupply / 100)
+        if (newMaxBridge > initialSupply / 100) {
             revert ValidationFailed("Bridge amount too high");
+        }
 
         uint256 oldMaxBridge = maxBridge;
         maxBridge = newMaxBridge;
@@ -315,24 +299,17 @@ contract GovernanceTokenV2 is
      * @custom:events-emits {UpgradeScheduled} event
      * @custom:throws ZeroAddress if newImplementation is zero
      */
-    function scheduleUpgrade(
-        address newImplementation
-    ) external nonZeroAddress(newImplementation) onlyRole(UPGRADER_ROLE) {
+    function scheduleUpgrade(address newImplementation)
+        external
+        nonZeroAddress(newImplementation)
+        onlyRole(UPGRADER_ROLE)
+    {
         uint64 currentTime = uint64(block.timestamp);
         uint64 effectiveTime = currentTime + uint64(UPGRADE_TIMELOCK_DURATION);
 
-        pendingUpgrade = UpgradeRequest({
-            implementation: newImplementation,
-            scheduledTime: currentTime,
-            exists: true
-        });
+        pendingUpgrade = UpgradeRequest({implementation: newImplementation, scheduledTime: currentTime, exists: true});
 
-        emit UpgradeScheduled(
-            msg.sender,
-            newImplementation,
-            currentTime,
-            effectiveTime
-        );
+        emit UpgradeScheduled(msg.sender, newImplementation, currentTime, effectiveTime);
     }
 
     /**
@@ -353,41 +330,21 @@ contract GovernanceTokenV2 is
      * @return The time remaining in seconds, or 0 if no upgrade is scheduled or timelock has passed
      */
     function upgradeTimelockRemaining() external view returns (uint256) {
-        return
-            pendingUpgrade.exists &&
-                block.timestamp <
-                pendingUpgrade.scheduledTime + UPGRADE_TIMELOCK_DURATION
-                ? pendingUpgrade.scheduledTime +
-                    UPGRADE_TIMELOCK_DURATION -
-                    block.timestamp
-                : 0;
+        return pendingUpgrade.exists && block.timestamp < pendingUpgrade.scheduledTime + UPGRADE_TIMELOCK_DURATION
+            ? pendingUpgrade.scheduledTime + UPGRADE_TIMELOCK_DURATION - block.timestamp
+            : 0;
     }
 
     // The following functions are overrides required by Solidity.
     /// @inheritdoc ERC20PermitUpgradeable
-    function nonces(
-        address owner
-    )
-        public
-        view
-        override(ERC20PermitUpgradeable, NoncesUpgradeable)
-        returns (uint256)
-    {
+    function nonces(address owner) public view override(ERC20PermitUpgradeable, NoncesUpgradeable) returns (uint256) {
         return super.nonces(owner);
     }
 
     /// @inheritdoc ERC20Upgradeable
-    function _update(
-        address from,
-        address to,
-        uint256 value
-    )
+    function _update(address from, address to, uint256 value)
         internal
-        override(
-            ERC20Upgradeable,
-            ERC20PausableUpgradeable,
-            ERC20VotesUpgradeable
-        )
+        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20VotesUpgradeable)
     {
         super._update(from, to, value);
     }
@@ -400,25 +357,18 @@ contract GovernanceTokenV2 is
      * @custom:throws UpgradeNotScheduled if no upgrade was scheduled
      * @custom:throws UpgradeTimelockActive if timelock period hasn't passed
      */
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyRole(UPGRADER_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
         if (!pendingUpgrade.exists) {
             revert UpgradeNotScheduled();
         }
 
         if (pendingUpgrade.implementation != newImplementation) {
-            revert ImplementationMismatch(
-                pendingUpgrade.implementation,
-                newImplementation
-            );
+            revert ImplementationMismatch(pendingUpgrade.implementation, newImplementation);
         }
 
         uint256 timeElapsed = block.timestamp - pendingUpgrade.scheduledTime;
         if (timeElapsed < UPGRADE_TIMELOCK_DURATION) {
-            revert UpgradeTimelockActive(
-                UPGRADE_TIMELOCK_DURATION - timeElapsed
-            );
+            revert UpgradeTimelockActive(UPGRADE_TIMELOCK_DURATION - timeElapsed);
         }
 
         // Clear the scheduled upgrade
@@ -436,21 +386,16 @@ contract GovernanceTokenV2 is
     // ================================================================
 
     /// @inheritdoc IERC165
-    function supportsInterface(
-        bytes4 interfaceId
-    )
+    function supportsInterface(bytes4 interfaceId)
         public
         pure
         virtual
         override(AccessControlUpgradeable, IERC165)
         returns (bool)
     {
-        return
-            interfaceId == type(IERC20).interfaceId ||
-            interfaceId == type(IBurnMintERC20).interfaceId ||
-            interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IAccessControl).interfaceId ||
-            interfaceId == type(IGetCCIPAdmin).interfaceId;
+        return interfaceId == type(IERC20).interfaceId || interfaceId == type(IBurnMintERC20).interfaceId
+            || interfaceId == type(IERC165).interfaceId || interfaceId == type(IAccessControl).interfaceId
+            || interfaceId == type(IGetCCIPAdmin).interfaceId;
     }
 
     /**
@@ -468,10 +413,7 @@ contract GovernanceTokenV2 is
      * @custom:throws BridgeAmountExceeded if amount exceeds maxBridge
      * @custom:throws MaxSupplyExceeded if the mint would exceed initialSupply
      */
-    function mint(
-        address account,
-        uint256 amount
-    )
+    function mint(address account, uint256 amount)
         public
         nonZeroAddress(account)
         nonZeroAmount(amount)
@@ -482,8 +424,9 @@ contract GovernanceTokenV2 is
 
         // Cache maxBridge to avoid double storage read
         uint256 maxBridgeAmount = maxBridge;
-        if (amount > maxBridgeAmount)
+        if (amount > maxBridgeAmount) {
             revert BridgeAmountExceeded(amount, maxBridgeAmount);
+        }
 
         // Supply constraint validation
         uint256 newSupply = totalSupply() + amount;
@@ -501,9 +444,7 @@ contract GovernanceTokenV2 is
     /// @inheritdoc ERC20BurnableUpgradeable
     /// @dev Uses OZ ERC20 _burn to disallow burning from address(0).
     /// @dev Decreases the total supply.
-    function burn(
-        uint256 amount
-    ) public override(IBurnMintERC20, ERC20BurnableUpgradeable) {
+    function burn(uint256 amount) public override(IBurnMintERC20, ERC20BurnableUpgradeable) {
         super.burn(amount);
     }
 
@@ -517,10 +458,7 @@ contract GovernanceTokenV2 is
     /// @inheritdoc ERC20BurnableUpgradeable
     /// @dev Uses OZ ERC20 _burn to disallow burning from address(0).
     /// @dev Decreases the total supply.
-    function burnFrom(
-        address account,
-        uint256 amount
-    ) public override(IBurnMintERC20, ERC20BurnableUpgradeable) {
+    function burnFrom(address account, uint256 amount) public override(IBurnMintERC20, ERC20BurnableUpgradeable) {
         super.burnFrom(account, amount);
     }
 

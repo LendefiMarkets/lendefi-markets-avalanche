@@ -99,19 +99,18 @@ contract BasicDeploy is Test {
     LendefiPoRFeed internal porFeedImplementation;
     WETH9 internal wethInstance;
     // USDC internal usdcInstance;
-    IERC20 usdcInstance = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); //real usdc ethereum for fork testing
-    IERC20 usdtInstance = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7); //real usdt ethereum for fork testing
-    IERC20 usd1Instance = IERC20(0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d); //real usd1 ethereum for fork testing
+    IERC20 usdcInstance = IERC20(0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E); //real USDC Avalanche for fork testing
+    IERC20 usdtInstance = IERC20(0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7); //real USDT Avalanche for fork testing
 
     function getNetworkAddresses()
         internal
         pure
         returns (address networkUSDC, address networkWETH, address UsdcWethPool)
     {
-        // Fork tests run on Ethereum mainnet, so use LendefiConstants addresses
-        networkUSDC = LendefiConstants.ETHEREUM_USDC;
-        networkWETH = LendefiConstants.ETHEREUM_WETH;
-        UsdcWethPool = LendefiConstants.USDC_WETH_POOL;
+        // Fork tests run on Avalanche mainnet, so use Avalanche addresses
+        networkUSDC = 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E; // Avalanche USDC
+        networkWETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; // Avalanche WAVAX (acts as native gas token)
+        UsdcWethPool = 0xfAe3f424a0a47706811521E3ee268f00cFb5c45E; // Avalanche AVAX/USDC pool
     }
 
     function deployTokenUpgrade() internal {
@@ -897,8 +896,9 @@ contract BasicDeploy is Test {
         // Deploy market factory
         _deployMarketFactory();
 
-        // Deploy USD1 market
-        _deployMarket(address(usd1Instance), "Lendefi Yield Token USD1", "LYTUSD1");
+        // Deploy USDC market instead of USD1 for Avalanche
+        (address networkUSDC,,) = getNetworkAddresses();
+        _deployMarket(networkUSDC, "Lendefi Yield Token USDC", "LYTUSDC");
     }
 
     /**
@@ -928,8 +928,9 @@ contract BasicDeploy is Test {
         // Deploy market factory
         _deployMarketFactory();
 
-        // Deploy USD1 market
-        _deployMarket(address(usd1Instance), "Lendefi Yield Token USD1", "LYTUSD1");
+        // Deploy USDC market instead of USD1 for Avalanche
+        (address networkUSDC,,) = getNetworkAddresses();
+        _deployMarket(networkUSDC, "Lendefi Yield Token USDC", "LYTUSDC");
     }
 
     /**

@@ -99,19 +99,29 @@
         "tokens": {
             "usdc": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
             "usdt": "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
-            "usd1": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+            "btc": "0x152b9d0FdC40C096757F570A51E494bd4b943E50",
             "weth": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",
-            "wbtc": "0x50b7545627a5162F82A992c33b87aDc75187B218",
-            "link": "0x5947BB275c521040DCc7b7369b1B9b8C904F7159"
+            "link": "0x5947BB275c521040051D82396192181b413227A3",
+            "wavax": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+            "cai": "0x48f88A3fE843ccb0b5003e70B4192c1d7448bEf0"
         },
         "pools": {
-            "usdc-usdt": "0x0000000000000000000000000000000000000000",
-            "usdt-weth": "0x0000000000000000000000000000000000000000",
-            "weth-usdc": "0x0000000000000000000000000000000000000000",
-            "wbtc-usdc": "0x0000000000000000000000000000000000000000",
-            "link-weth": "0x0000000000000000000000000000000000000000",
-            "link-usdc": "0x0000000000000000000000000000000000000000",
-            "usd1-usdc": "0x0000000000000000000000000000000000000000"
+            "usdt-usdc": "0x804226cA4EDb38e7eF56D16d16E92dc3223347A0",
+            "btc-usdc": "0xD1356d360F37932059E5b89b7992692aA234EDA6",
+            "avax-usdc": "0xfAe3f424a0a47706811521E3ee268f00cFb5c45E",
+            "cai-avax": "0x12089f58e0E7EAdfc7d60CF1B1Ed6839A811672A",
+            "weth-avax": "0x7b602f98D71715916E7c963f51bfEbC754aDE2d0",
+            "link-avax": "0xEB7e0191f4054868D97F33CA7a4176b226cCBd2F"
+        },
+        "oracles": {
+            "aave-usd": "0x3CA13391E9fb38a75330fb28f8cc2eB3D9ceceED",
+            "avax-usd": "0x0A77230d17318075983913bC2145DB16C7366156",
+            "usdt-usd": "0xEBE676ee90Fe1112671f19b6B7459bC678B67e8a",
+            "usdc-usd": "0xF096872672F44d6EBA71458D74fe67F9a77a23B9",
+            "link-usd": "0x49ccd9ca821EfEab2b98c60dC60F518E765EDe9a",
+            "link-avax": "0x1b8a25F73c9420dD507406C3A3816A276b62f56a",
+            "eth-usd": "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
+            "wbtc-usd": "0x86442E3a98558357d46E6182F4b262f76c4fa26F"
         }
     },
     "polygon-mainnet": {

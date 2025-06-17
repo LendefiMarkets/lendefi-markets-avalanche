@@ -306,7 +306,7 @@ contract LendefiMarketDashboardTest is BasicDeploy {
     function test_EmptyProtocolState() public {
         // Deploy a fresh factory implementation and proxy
         LendefiMarketFactory freshFactoryImpl = new LendefiMarketFactory();
-        
+
         // Get network addresses for test
         (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
 

@@ -20,7 +20,7 @@ contract LendefiMarketVaultSupplyRateTest is Test, BasicDeploy {
 
     function setUp() public {
         deployMarketsWithUSDC();
-        
+
         // Set dynamic amounts
         INITIAL_DEPOSIT = getUSDCAmount(100_000);
         YIELD_BOOST = getUSDCAmount(10_000);
@@ -115,7 +115,9 @@ contract LendefiMarketVaultSupplyRateTest is Test, BasicDeploy {
         assertGt(newSupplyRate, initialSupplyRate, "Supply rate should increase after yield boost");
 
         // The conversion rate should reflect commission
-        assertLt(sharesFor1Asset, 10 ** usdcInstance.decimals(), "Shares received should be less than 1:1 due to commission");
+        assertLt(
+            sharesFor1Asset, 10 ** usdcInstance.decimals(), "Shares received should be less than 1:1 due to commission"
+        );
     }
 
     /**

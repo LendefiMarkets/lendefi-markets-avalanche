@@ -429,7 +429,8 @@ contract LendefiCoreFuzzTest is BasicDeploy {
         vm.prank(address(timelockInstance));
         marketCoreInstance.setLiquidatorThreshold(20_000 ether);
 
-        ILendefiMarketVault.ProtocolConfig memory loadedConfig = ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
+        ILendefiMarketVault.ProtocolConfig memory loadedConfig =
+            ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
         assertEq(loadedConfig.profitTargetRate, profitTarget);
         assertEq(loadedConfig.borrowRate, borrowRate);
     }

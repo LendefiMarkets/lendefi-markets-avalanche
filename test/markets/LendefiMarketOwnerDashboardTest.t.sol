@@ -176,32 +176,9 @@ contract LendefiMarketOwnerDashboardTest is BasicDeploy {
 
     // ========== Borrower & LP Tests ==========
 
-    function test_GetOwnerBorrowers() public {
-        ILendefiMarketOwnerDashboard.BorrowerInfo[] memory borrowers = ownerDashboard.getOwnerBorrowers(charlie);
-
-        // Currently returns empty array (placeholder implementation)
-        assertEq(borrowers.length, 0);
-    }
-
     function test_GetOwnerLiquidityProviders() public {
         ILendefiMarketOwnerDashboard.LiquidityProviderInfo[] memory providers =
             ownerDashboard.getOwnerLiquidityProviders(charlie);
-
-        // Currently returns empty array (placeholder implementation)
-        assertEq(providers.length, 0);
-    }
-
-    function test_GetMarketBorrowers() public {
-        ILendefiMarketOwnerDashboard.BorrowerInfo[] memory borrowers =
-            ownerDashboard.getMarketBorrowers(charlie, address(usdcInstance));
-
-        // Currently returns empty array (placeholder implementation)
-        assertEq(borrowers.length, 0);
-    }
-
-    function test_GetMarketLiquidityProviders() public {
-        ILendefiMarketOwnerDashboard.LiquidityProviderInfo[] memory providers =
-            ownerDashboard.getMarketLiquidityProviders(charlie, address(usdcInstance));
 
         // Currently returns empty array (placeholder implementation)
         assertEq(providers.length, 0);
@@ -245,29 +222,6 @@ contract LendefiMarketOwnerDashboardTest is BasicDeploy {
     }
 
     // ========== Ranking Tests ==========
-
-    function test_GetTopBorrowersByDebt() public {
-        ILendefiMarketOwnerDashboard.BorrowerInfo[] memory topBorrowers =
-            ownerDashboard.getTopBorrowersByDebt(charlie, 10);
-
-        // Currently returns empty array (placeholder implementation)
-        assertEq(topBorrowers.length, 0);
-    }
-
-    function test_GetTopLiquidityProviders() public {
-        ILendefiMarketOwnerDashboard.LiquidityProviderInfo[] memory topProviders =
-            ownerDashboard.getTopLiquidityProviders(charlie, 10);
-
-        // Currently returns empty array (placeholder implementation)
-        assertEq(topProviders.length, 0);
-    }
-
-    function test_GetAtRiskBorrowers() public {
-        ILendefiMarketOwnerDashboard.BorrowerInfo[] memory atRiskBorrowers = ownerDashboard.getAtRiskBorrowers(charlie);
-
-        // Currently returns empty array (placeholder implementation)
-        assertEq(atRiskBorrowers.length, 0);
-    }
 
     // ========== Integration Tests ==========
 
@@ -321,16 +275,10 @@ contract LendefiMarketOwnerDashboardTest is BasicDeploy {
         ILendefiMarketOwnerDashboard.OwnerMarketOverview[] memory overviews =
             ownerDashboard.getOwnerMarketOverviews(alice);
         ILendefiMarketOwnerDashboard.OwnerPortfolioStats memory stats = ownerDashboard.getOwnerPortfolioStats(alice);
-        ILendefiMarketOwnerDashboard.BorrowerInfo[] memory borrowers = ownerDashboard.getOwnerBorrowers(alice);
-        ILendefiMarketOwnerDashboard.LiquidityProviderInfo[] memory providers =
-            ownerDashboard.getOwnerLiquidityProviders(alice);
-
         assertEq(overviews.length, 0);
         assertEq(stats.totalMarkets, 0);
         assertEq(stats.totalPortfolioTVL, 0);
         assertEq(stats.portfolioHealthScore, 1000); // Perfect health with no activity
-        assertEq(borrowers.length, 0);
-        assertEq(providers.length, 0);
     }
 
     function test_OwnerSpecificData() public {
@@ -338,7 +286,7 @@ contract LendefiMarketOwnerDashboardTest is BasicDeploy {
         address david = makeAddr("david");
 
         // Grant MARKET_OWNER_ROLE to david
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, david);
 
         // David creates his own market

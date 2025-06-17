@@ -47,7 +47,7 @@ contract LendefiCoreAdditionalCoverageTest is BasicDeploy {
 
         // Deploy complete system
         deployMarketsWithUSDC();
-        
+
         // Set dynamic amounts
         INITIAL_LIQUIDITY = getUSDCAmount(1_000_000);
 

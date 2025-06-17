@@ -170,10 +170,7 @@ contract WETHForkTest is BasicDeploy {
                 porFeed: address(0),
                 primaryOracleType: IASSETS.OracleType.CHAINLINK,
                 tier: IASSETS.CollateralTier.STABLE,
-                chainlinkConfig: IASSETS.ChainlinkOracleConfig({
-                    oracleUSD: USDC_CHAINLINK_ORACLE,
-                    active: 1
-                }),
+                chainlinkConfig: IASSETS.ChainlinkOracleConfig({oracleUSD: USDC_CHAINLINK_ORACLE, active: 1}),
                 poolConfig: IASSETS.UniswapPoolConfig({pool: address(0), twapPeriod: 0, active: 0})
             })
         );
@@ -227,7 +224,7 @@ contract WETHForkTest is BasicDeploy {
         console2.log("WBTC Uniswap price:", uniswapPrice);
         console2.log("WBTC Chainlink price in USD:", chainlinkPrice / 1e6);
         console2.log("WBTC Uniswap price in massive units:", uniswapPrice);
-        
+
         // This shows the scale difference
         console2.log("Chainlink vs Uniswap ratio:", uniswapPrice / chainlinkPrice);
 

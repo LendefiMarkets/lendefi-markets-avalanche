@@ -17,7 +17,7 @@ contract SimpleLifecycleTest is Test, BasicDeploy {
 
     function setUp() public {
         deployMarketsWithUSDC();
-        
+
         // Set dynamic amounts
         INITIAL_DEPOSIT = getUSDCAmount(100_000);
         YIELD_BOOST = getUSDCAmount(10_000);

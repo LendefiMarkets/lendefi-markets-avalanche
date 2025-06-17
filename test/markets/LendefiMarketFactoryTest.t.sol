@@ -68,24 +68,36 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertTrue(marketFactoryInstance.assetsModuleImplementation() != address(0));
         assertEq(marketFactoryInstance.govToken(), address(tokenInstance));
         assertEq(marketFactoryInstance.timelock(), address(timelockInstance));
-        assertTrue(marketFactoryInstance.hasRole(DEFAULT_ADMIN_ROLE, address(timelockInstance)));
+        assertTrue(marketFactoryInstance.hasRole(DEFAULT_ADMIN_ROLE, gnosisSafe));
     }
 
     function test_Revert_FactoryInitializeTwice() public {
+        // Get network addresses for test
         (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
+
         vm.expectRevert();
         marketFactoryInstance.initialize(
-            address(timelockInstance), address(tokenInstance), address(0), address(ecoInstance), networkUSDC, networkWETH, UsdcWethPool
+            address(timelockInstance),
+            address(tokenInstance),
+            address(0),
+            address(ecoInstance),
+            networkUSDC,
+            networkWETH,
+            UsdcWethPool
         );
     }
 
     function test_Revert_FactoryInitializeZeroAddress() public {
         LendefiMarketFactory newFactory = new LendefiMarketFactory();
+
+        // Get network addresses for test
         (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
 
         // The factory uses InvalidInitialization when admin is zero
         vm.expectRevert();
-        newFactory.initialize(address(0), address(tokenInstance), address(0), address(ecoInstance), networkUSDC, networkWETH, UsdcWethPool);
+        newFactory.initialize(
+            address(0), address(tokenInstance), address(0), address(ecoInstance), networkUSDC, networkWETH, UsdcWethPool
+        );
     }
 
     // ============ Implementation Management Tests ============
@@ -122,7 +134,9 @@ contract LendefiMarketFactoryTest is BasicDeploy {
 
         vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, LendefiConstants.MANAGER_ROLE)
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, LendefiConstants.MANAGER_ROLE
+            )
         );
         marketFactoryInstance.setImplementations(
             address(newCoreImpl), address(0), address(posVaultImpl), address(assetsInstance), address(porFeedImpl)
@@ -316,7 +330,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         marketFactoryInstance.upgradeToAndCall(address(newImpl), "");
 
         // Upgrade from timelock
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         vm.expectRevert(abi.encodeWithSignature("UpgradeNotScheduled()"));
         marketFactoryInstance.upgradeToAndCall(address(newImpl), "");
     }
@@ -326,7 +340,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         LendefiMarketFactory newImpl = new LendefiMarketFactory();
 
         // Schedule an upgrade first
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.scheduleUpgrade(address(newImpl));
 
         // Verify upgrade is scheduled
@@ -335,9 +349,9 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertEq(impl, address(newImpl), "Implementation should match");
 
         // Cancel the upgrade
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         vm.expectEmit(true, true, false, true);
-        emit ILendefiMarketFactory.UpgradeCancelled(address(timelockInstance), address(newImpl));
+        emit ILendefiMarketFactory.UpgradeCancelled(gnosisSafe, address(newImpl));
         marketFactoryInstance.cancelUpgrade();
 
         // Verify upgrade is cancelled
@@ -348,7 +362,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
 
     function test_Revert_CancelUpgrade_NotScheduled() public {
         // Try to cancel when no upgrade is scheduled
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         vm.expectRevert(abi.encodeWithSignature("UpgradeNotScheduled()"));
         marketFactoryInstance.cancelUpgrade();
     }
@@ -356,7 +370,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
     function test_Revert_CancelUpgrade_Unauthorized() public {
         // Deploy new implementation and schedule upgrade
         LendefiMarketFactory newImpl = new LendefiMarketFactory();
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.scheduleUpgrade(address(newImpl));
 
         // Try to cancel from unauthorized account
@@ -377,7 +391,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         LendefiMarketFactory newImpl = new LendefiMarketFactory();
         uint256 scheduleTime = block.timestamp;
 
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.scheduleUpgrade(address(newImpl));
 
         // Should return the full timelock duration immediately after scheduling
@@ -408,14 +422,14 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         // Deploy new implementation and schedule upgrade
         LendefiMarketFactory newImpl = new LendefiMarketFactory();
 
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.scheduleUpgrade(address(newImpl));
 
         // Verify timelock is active
         assertGt(marketFactoryInstance.upgradeTimelockRemaining(), 0, "Should have remaining time");
 
         // Cancel the upgrade
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.cancelUpgrade();
 
         // Should return 0 after cancellation
@@ -445,14 +459,14 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         LendefiMarketFactory newImpl2 = new LendefiMarketFactory();
 
         // Schedule upgrade with first implementation
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.scheduleUpgrade(address(newImpl1));
 
         // Fast forward past timelock
         vm.warp(block.timestamp + LendefiConstants.UPGRADE_TIMELOCK_DURATION + 1);
 
         // Try to upgrade with different implementation
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         vm.expectRevert(
             abi.encodeWithSignature("ImplementationMismatch(address,address)", address(newImpl1), address(newImpl2))
         );
@@ -464,11 +478,11 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         LendefiMarketFactory newImpl = new LendefiMarketFactory();
 
         // Schedule upgrade
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         marketFactoryInstance.scheduleUpgrade(address(newImpl));
 
         // Try to upgrade immediately (before timelock expires)
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         vm.expectRevert(
             abi.encodeWithSignature("UpgradeTimelockActive(uint256)", LendefiConstants.UPGRADE_TIMELOCK_DURATION)
         );
@@ -477,7 +491,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         // Fast forward 1 day (still within timelock)
         vm.warp(block.timestamp + 1 days);
 
-        vm.prank(address(timelockInstance));
+        vm.prank(gnosisSafe);
         vm.expectRevert(
             abi.encodeWithSignature(
                 "UpgradeTimelockActive(uint256)", LendefiConstants.UPGRADE_TIMELOCK_DURATION - 1 days
@@ -538,7 +552,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
 
         // Grant MARKET_OWNER_ROLE to alice and create a market for her
         // Use startPrank/stopPrank instead of just prank to ensure it works correctly
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, alice);
         vm.stopPrank();
 
@@ -587,7 +601,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertEq(marketFactoryInstance.getMarketOwnersCount(), 1);
 
         // Grant MARKET_OWNER_ROLE to alice and create a market
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, alice);
         vm.stopPrank();
 
@@ -598,7 +612,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertEq(marketFactoryInstance.getMarketOwnersCount(), 2);
 
         // Grant MARKET_OWNER_ROLE to bob and create a market
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, bob);
         vm.stopPrank();
 
@@ -615,7 +629,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertEq(marketFactoryInstance.getMarketOwnerByIndex(0), charlie);
 
         // Grant MARKET_OWNER_ROLE to alice and create a market
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, alice);
         vm.stopPrank();
 
@@ -629,10 +643,10 @@ contract LendefiMarketFactoryTest is BasicDeploy {
 
     function test_Revert_GetMarketOwnerByIndex_OutOfBounds() public {
         // Should revert when accessing index >= length
-        vm.expectRevert("Index out of bounds");
+        vm.expectRevert(abi.encodeWithSignature("InvalidIndex()"));
         marketFactoryInstance.getMarketOwnerByIndex(1);
 
-        vm.expectRevert("Index out of bounds");
+        vm.expectRevert(abi.encodeWithSignature("InvalidIndex()"));
         marketFactoryInstance.getMarketOwnerByIndex(999);
     }
 
@@ -651,7 +665,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertEq(marketFactoryInstance.getTotalMarketsCount(), 3);
 
         // Grant MARKET_OWNER_ROLE to alice and create a market
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, alice);
         vm.stopPrank();
 
@@ -665,7 +679,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
     function test_MultiTenant_MarketIsolation() public {
         addMultipleAssetsToAllowlist();
         // Grant MARKET_OWNER_ROLE to alice
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, alice);
         vm.stopPrank();
 
@@ -708,7 +722,7 @@ contract LendefiMarketFactoryTest is BasicDeploy {
         assertEq(activeMarkets.length, 1);
 
         // Grant MARKET_OWNER_ROLE to alice
-        vm.startPrank(address(timelockInstance));
+        vm.startPrank(gnosisSafe);
         marketFactoryInstance.grantRole(LendefiConstants.MARKET_OWNER_ROLE, alice);
         vm.stopPrank();
 

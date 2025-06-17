@@ -68,10 +68,10 @@ contract LendefiAssets is
     /// @notice Network-specific addresses for oracle validation
     /// @dev Set during initialization to support different networks
     address public networkUSDC;
-    /// @notice Network-specific WETH address for oracle calculations
-    address public networkWETH;
-    /// @notice Uniswap V3 pool address for USDC/WETH price reference
-    address public usdcWethPool;
+    /// @notice Network-specific AVAX address for oracle calculations
+    address public networkWAVAX;
+    /// @notice Uniswap V3 pool address for USDC/AVAXprice reference
+    address public usdcAvaxPool;
 
     /// @notice Information about the currently pending upgrade request
     /// @dev Stores implementation address and scheduling details
@@ -140,8 +140,8 @@ contract LendefiAssets is
      * @param porFeed_ Proof of Reserve feed address
      * @param coreAddress_ Address of the core contract
      * @param networkUSDC_ Network-specific USDC address for oracle validation
-     * @param networkWETH_ Network-specific WETH address for oracle validation
-     * @param usdcWethPool_ Network-specific USDC/WETH pool for price reference
+     * @param networkWAVAX_ Network-specific AVAX address for oracle validation
+     * @param usdcAvaxPool_ Network-specific USDC/AVAX pool for price reference
      * @custom:security Sets up the initial access control roles:
      * - DEFAULT_ADMIN_ROLE: timelock_
      * - MANAGER_ROLE: timelock_, marketOwner
@@ -161,12 +161,12 @@ contract LendefiAssets is
         address porFeed_,
         address coreAddress_,
         address networkUSDC_,
-        address networkWETH_,
-        address usdcWethPool_
+        address networkWAVAX_,
+        address usdcAvaxPool_
     ) external initializer {
         if (
             timelock_ == address(0) || marketOwner == address(0) || porFeed_ == address(0) || coreAddress_ == address(0)
-                || networkUSDC_ == address(0) || networkWETH_ == address(0) || usdcWethPool_ == address(0)
+                || networkUSDC_ == address(0) || networkWAVAX_ == address(0) || usdcAvaxPool_ == address(0)
         ) {
             revert ZeroAddressNotAllowed();
         }
@@ -200,8 +200,8 @@ contract LendefiAssets is
 
         // Set network-specific addresses
         networkUSDC = networkUSDC_;
-        networkWETH = networkWETH_;
-        usdcWethPool = usdcWethPool_;
+        networkWAVAX = networkWAVAX_;
+        usdcAvaxPool = usdcAvaxPool_;
 
         timelock = timelock_;
         version = 1;
@@ -961,7 +961,7 @@ contract LendefiAssets is
             revert InvalidUniswapConfig(asset);
         }
 
-        tokenPriceInUSD = getAnyPoolTokenPriceInUSD(config.pool, asset, usdcWethPool, config.twapPeriod); // Price on 1e6 scale, USDC
+        tokenPriceInUSD = getAnyPoolTokenPriceInUSD(config.pool, asset, usdcAvaxPool, config.twapPeriod); // Price on 1e6 scale, USDC
 
         if (tokenPriceInUSD <= 0) {
             revert OracleInvalidPrice(config.pool, int256(tokenPriceInUSD));
@@ -1023,10 +1023,10 @@ contract LendefiAssets is
             uint256 rawPrice = UniswapTickMath.getRawPrice(pool, isToken0, 10 ** assetDecimals, twapPeriod);
 
             IUniswapV3Pool ethUSDCPool = IUniswapV3Pool(ethUsdcPool);
-            // Dynamically determine WETH position in ETH/USDC pool
+            // Dynamically determine AVAX position in ETH/USDC pool
             address token0 = ethUSDCPool.token0();
-            bool wethIsToken0 = networkWETH == token0;
-            uint256 ethPriceInUSD = UniswapTickMath.getRawPrice(ethUSDCPool, wethIsToken0, 1e18, twapPeriod);
+            bool AVAXIsToken0 = networkWAVAX == token0;
+            uint256 ethPriceInUSD = UniswapTickMath.getRawPrice(ethUSDCPool, AVAXIsToken0, 1e18, twapPeriod);
 
             // Adjust token/ETH price to account for token decimals
             uint256 adjustedPrice = rawPrice / (10 ** (18 - assetDecimals)); // Scale to 1e6 precision
@@ -1134,10 +1134,10 @@ contract LendefiAssets is
             revert NotEnoughValidOracles(asset, assetInfo[asset].assetMinimumOracles, 0);
         }
 
-        // On Ethereum mainnet, ensure pool contains USDC or WETH for pricing
+        // On Ethereum mainnet, ensure pool contains USDC or AVAX for pricing
         if (block.chainid == LendefiConstants.AVALANCHE_CHAIN_ID) {
             bool hasValidPairing =
-                (token0 == networkUSDC || token0 == networkWETH) || (token1 == networkUSDC || token1 == networkWETH);
+                (token0 == networkUSDC || token0 == networkWAVAX) || (token1 == networkUSDC || token1 == networkWAVAX);
             if (!hasValidPairing) {
                 string memory symbol0 = IERC20Metadata(token0).symbol();
                 string memory symbol1 = IERC20Metadata(token1).symbol();

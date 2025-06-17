@@ -68,8 +68,10 @@ contract LendefiAssets is
     /// @notice Network-specific addresses for oracle validation
     /// @dev Set during initialization to support different networks
     address public networkUSDC;
+    /// @notice Network-specific WETH address for oracle calculations
     address public networkWETH;
-    address public UsdcWethPool;
+    /// @notice Uniswap V3 pool address for USDC/WETH price reference
+    address public usdcWethPool;
 
     /// @notice Information about the currently pending upgrade request
     /// @dev Stores implementation address and scheduling details
@@ -139,7 +141,7 @@ contract LendefiAssets is
      * @param coreAddress_ Address of the core contract
      * @param networkUSDC_ Network-specific USDC address for oracle validation
      * @param networkWETH_ Network-specific WETH address for oracle validation
-     * @param UsdcWethPool_ Network-specific USDC/WETH pool for price reference
+     * @param usdcWethPool_ Network-specific USDC/WETH pool for price reference
      * @custom:security Sets up the initial access control roles:
      * - DEFAULT_ADMIN_ROLE: timelock_
      * - MANAGER_ROLE: timelock_, marketOwner
@@ -160,11 +162,11 @@ contract LendefiAssets is
         address coreAddress_,
         address networkUSDC_,
         address networkWETH_,
-        address UsdcWethPool_
+        address usdcWethPool_
     ) external initializer {
         if (
             timelock_ == address(0) || marketOwner == address(0) || porFeed_ == address(0) || coreAddress_ == address(0)
-                || networkUSDC_ == address(0) || networkWETH_ == address(0) || UsdcWethPool_ == address(0)
+                || networkUSDC_ == address(0) || networkWETH_ == address(0) || usdcWethPool_ == address(0)
         ) {
             revert ZeroAddressNotAllowed();
         }
@@ -199,7 +201,7 @@ contract LendefiAssets is
         // Set network-specific addresses
         networkUSDC = networkUSDC_;
         networkWETH = networkWETH_;
-        UsdcWethPool = UsdcWethPool_;
+        usdcWethPool = usdcWethPool_;
 
         timelock = timelock_;
         version = 1;
@@ -298,7 +300,6 @@ contract LendefiAssets is
     }
 
     // ==================== CORE FUNCTIONS ====================
-
 
     /**
      * @notice Pauses all contract operations
@@ -553,7 +554,6 @@ contract LendefiAssets is
             : 0;
     }
 
-
     /**
      * @notice Retrieves rates configuration for all collateral tiers
      * @dev Returns parallel arrays for jump rates and liquidation fees
@@ -605,11 +605,7 @@ contract LendefiAssets is
         returns (bool)
     {
         // Check standard supply cap
-        if (tvl + amount > assetInfo[asset].maxSupplyThreshold) {
-            return true;
-        }
-
-        return false;
+        return (tvl + amount > assetInfo[asset].maxSupplyThreshold);
     }
 
     /**
@@ -628,9 +624,7 @@ contract LendefiAssets is
             uint256 assetBalance = IERC20(asset).balanceOf(pool);
 
             // If amount is more than 3% of the available assets in pool, revert
-            if (amount > (assetBalance * 3) / 100) {
-                return true;
-            }
+            return (amount > (assetBalance * 3) / 100);
         }
 
         return false;
@@ -799,10 +793,8 @@ contract LendefiAssets is
             revert CircuitBreakerActive(asset);
         }
 
-        // Load into memory once
-        Asset storage info = assetInfo[asset];
-        uint8 chainlinkActive = info.chainlinkConfig.active;
-        uint8 uniswapActive = info.poolConfig.active;
+        uint8 chainlinkActive = assetInfo[asset].chainlinkConfig.active;
+        uint8 uniswapActive = assetInfo[asset].poolConfig.active;
 
         // Early returns for single oracle
         if (chainlinkActive == 1 && uniswapActive == 0) {
@@ -815,9 +807,7 @@ contract LendefiAssets is
         // Dual-oracle case (implicitly totalActive == 2)
         uint256 price1 = _getChainlinkPrice(asset);
         uint256 price2 = _getUniswapTWAPPrice(asset);
-        uint256 median = (price1 + price2) >> 1; // Bit shift instead of division
-
-        return median;
+        return (price1 + price2) >> 1; // Bit shift instead of division
     }
 
     /**
@@ -971,8 +961,7 @@ contract LendefiAssets is
             revert InvalidUniswapConfig(asset);
         }
 
-        tokenPriceInUSD =
-            getAnyPoolTokenPriceInUSD(config.pool, asset, UsdcWethPool, config.twapPeriod); // Price on 1e6 scale, USDC
+        tokenPriceInUSD = getAnyPoolTokenPriceInUSD(config.pool, asset, usdcWethPool, config.twapPeriod); // Price on 1e6 scale, USDC
 
         if (tokenPriceInUSD <= 0) {
             revert OracleInvalidPrice(config.pool, int256(tokenPriceInUSD));
@@ -1068,11 +1057,15 @@ contract LendefiAssets is
      * @return token1 The address of token1 in the pool
      * @custom:reverts AssetNotInUniswapPool if the asset is not present in the pool
      */
-    function _validateAssetInPool(address asset, address poolAddress) internal view returns (address token0, address token1) {
+    function _validateAssetInPool(address asset, address poolAddress)
+        internal
+        view
+        returns (address token0, address token1)
+    {
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         token0 = pool.token0();
         token1 = pool.token1();
-        
+
         if (asset != token0 && asset != token1) {
             revert AssetNotInUniswapPool(asset, poolAddress);
         }
@@ -1143,10 +1136,12 @@ contract LendefiAssets is
 
         // On Ethereum mainnet, ensure pool contains USDC or WETH for pricing
         if (block.chainid == LendefiConstants.ETHEREUM_CHAIN_ID) {
-            bool hasValidPairing = (token0 == networkUSDC || token0 == networkWETH) ||
-                                  (token1 == networkUSDC || token1 == networkWETH);
+            bool hasValidPairing =
+                (token0 == networkUSDC || token0 == networkWETH) || (token1 == networkUSDC || token1 == networkWETH);
             if (!hasValidPairing) {
-                revert InvalidParameter("pool", uint256(uint160(uniswapPool)));
+                string memory symbol0 = IERC20Metadata(token0).symbol();
+                string memory symbol1 = IERC20Metadata(token1).symbol();
+                revert InvalidPool(address(uniswapPool), symbol0, symbol1);
             }
         }
     }
@@ -1168,7 +1163,7 @@ contract LendefiAssets is
         if (roundId <= 1) return 0;
         (, int256 previousPrice,, uint256 previousTimestamp,) = AggregatorV3Interface(oracle).getRoundData(roundId - 1);
         if (previousPrice <= 0 || previousTimestamp == 0) return 0;
-        
+
         // Calculate price deviation using previous price as denominator for volatility
         uint256 currentPrice = uint256(price);
         uint256 prevPrice = uint256(previousPrice);

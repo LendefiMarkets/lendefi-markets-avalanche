@@ -35,7 +35,15 @@ contract LendefiAssetsBranchTest is BasicDeploy {
         (address networkUSDC, address networkWETH, address UsdcWethPool) = getNetworkAddresses();
         bytes memory initData = abi.encodeCall(
             LendefiAssets.initialize,
-            (address(timelockInstance), charlie, address(porFeedImpl), address(marketCoreInstance), networkUSDC, networkWETH, UsdcWethPool)
+            (
+                address(timelockInstance),
+                charlie,
+                address(porFeedImpl),
+                address(marketCoreInstance),
+                networkUSDC,
+                networkWETH,
+                UsdcWethPool
+            )
         );
         address payable assetsProxy = payable(Upgrades.deployUUPSProxy("LendefiAssets.sol", initData));
         assetsProxyForUpgrades = LendefiAssets(assetsProxy);

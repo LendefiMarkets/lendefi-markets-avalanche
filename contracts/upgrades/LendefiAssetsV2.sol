@@ -139,7 +139,7 @@ contract LendefiAssetsV2 is
      * - PAUSER_ROLE: marketOwner, timelock_
      * - PROTOCOL_ROLE: coreAddress_
      * @custom:oracle-config Initializes oracle configuration with the following defaults:
-     * - freshnessThreshold: 28800 (8 hours)
+     * - freshnessThreshold: 86400 (24 hours, Avalanche oracles update less frequently)
      * - volatilityThreshold: 3600 (1 hour)
      * - volatilityPercentage: 20%
      * - circuitBreakerThreshold: 50%
@@ -175,7 +175,7 @@ contract LendefiAssetsV2 is
 
         // Initialize oracle config
         mainOracleConfig = MainOracleConfig({
-            freshnessThreshold: 28800, // 8 hours
+            freshnessThreshold: 86400, // 24 hours (Avalanche oracles update less frequently)
             volatilityThreshold: 3600, // 1 hour
             volatilityPercentage: 20, // 20%
             circuitBreakerThreshold: 50 // 50%
@@ -1125,7 +1125,7 @@ contract LendefiAssetsV2 is
         }
 
         // On Ethereum mainnet, ensure pool contains USDC or WETH for pricing
-        if (block.chainid == LendefiConstants.ETHEREUM_CHAIN_ID) {
+        if (block.chainid == LendefiConstants.AVALANCHE_CHAIN_ID) {
             bool hasValidPairing =
                 (token0 == networkUSDC || token0 == networkWETH) || (token1 == networkUSDC || token1 == networkWETH);
             if (!hasValidPairing) {

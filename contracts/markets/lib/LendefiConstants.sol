@@ -12,8 +12,7 @@ library LendefiConstants {
     uint256 internal constant WAD = 1e6;
 
     /// @notice Address of the Uniswap V3 USDC/ETH pool with 0.05% fee tier
-    address internal constant USDC_ETH_POOL =
-        0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
+    address internal constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
 
     /// @notice Role identifier for users authorized to pause/unpause the protocol
     bytes32 internal constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -28,8 +27,7 @@ library LendefiConstants {
     bytes32 internal constant PROTOCOL_ROLE = keccak256("PROTOCOL_ROLE");
 
     /// @notice Role identifier for addresses that can create new markets
-    bytes32 internal constant MARKET_OWNER_ROLE =
-        keccak256("MARKET_OWNER_ROLE");
+    bytes32 internal constant MARKET_OWNER_ROLE = keccak256("MARKET_OWNER_ROLE");
 
     /// @notice Duration of the timelock for upgrade operations (3 days)
     uint256 internal constant UPGRADE_TIMELOCK_DURATION = 3 days;

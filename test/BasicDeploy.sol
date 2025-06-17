@@ -125,12 +125,12 @@ contract BasicDeploy is Test {
         return baseAmount * 10 ** IERC20Metadata(token).decimals();
     }
 
-    function getNetworkAddresses() internal returns (address networkUSDC, address networkWETH, address UsdcWethPool) {
-        if (block.chainid == LendefiConstants.ETHEREUM_CHAIN_ID) {
-            // Ethereum mainnet addresses
-            networkUSDC = LendefiConstants.ETHEREUM_USDC;
-            networkWETH = LendefiConstants.ETHEREUM_WETH;
-            UsdcWethPool = LendefiConstants.USDC_WETH_POOL;
+    function getNetworkAddresses() internal returns (address networkUSDC, address networkWAVAX, address avaxUsdcPool) {
+        if (block.chainid == LendefiConstants.AVALANCHE_CHAIN_ID) {
+            // Avalanche mainnet addresses
+            networkUSDC = LendefiConstants.AVALANCHE_USDC;
+            networkWAVAX = LendefiConstants.AVALANCHE_WAVAX;
+            avaxUsdcPool = LendefiConstants.USDC_AVAX_POOL;
         } else {
             // Testnet or other networks - use mock/deployed addresses
             // Deploy WETH if not already deployed
@@ -138,10 +138,10 @@ contract BasicDeploy is Test {
                 wethInstance = new WETH9();
             }
             networkUSDC = address(usdcInstance);
-            networkWETH = address(wethInstance);
+            networkWAVAX = address(wethInstance);
             // For testnets, we'll need to deploy a mock pool or use a placeholder
             // This should be set to a real pool address in actual testnet deployment
-            UsdcWethPool = address(0x1234567890123456789012345678901234567890); // Placeholder for testnet
+            avaxUsdcPool = address(0x1234567890123456789012345678901234567890); // Placeholder for testnet
         }
     }
 
@@ -760,9 +760,7 @@ contract BasicDeploy is Test {
         // Assert that upgrade was successful
         assertEq(marketFactoryInstanceV2.version(), 2, "Version not incremented to 2");
         assertFalse(implAddressV2 == implAddressV1, "Implementation address didn't change");
-        assertTrue(
-            marketFactoryInstanceV2.hasRole(DEFAULT_ADMIN_ROLE, gnosisSafe), "Lost DEFAULT_ADMIN_ROLE"
-        );
+        assertTrue(marketFactoryInstanceV2.hasRole(DEFAULT_ADMIN_ROLE, gnosisSafe), "Lost DEFAULT_ADMIN_ROLE");
 
         // Test role management still works - gnosisSafe should have admin control
         vm.startPrank(gnosisSafe);

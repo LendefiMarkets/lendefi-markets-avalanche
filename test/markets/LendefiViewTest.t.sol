@@ -30,7 +30,7 @@ contract LendefiViewTest is BasicDeploy {
     function setUp() public {
         // Deploy complete system
         deployMarketsWithUSDC();
-        
+
         // Set dynamic amounts
         INITIAL_DEPOSIT = getUSDCAmount(100_000);
         BORROW_AMOUNT = getUSDCAmount(15_000);
@@ -157,7 +157,7 @@ contract LendefiViewTest is BasicDeploy {
         // Verify collateral value (10 ETH * $2500 = $25,000)
         // ETH_PRICE is in 8 decimals, WETH_COLLATERAL is 18 decimals, result should match USDC decimals
         uint8 usdcDecimals = IERC20Metadata(address(usdcInstance)).decimals();
-        uint256 expectedCollateralValue = (WETH_COLLATERAL * ETH_PRICE) / (1e8 * 10**(18 - usdcDecimals));
+        uint256 expectedCollateralValue = (WETH_COLLATERAL * ETH_PRICE) / (1e8 * 10 ** (18 - usdcDecimals));
         assertEq(summary.totalCollateralValue, expectedCollateralValue, "Collateral value should match");
 
         // Verify debt is at least the borrowed amount
@@ -266,14 +266,19 @@ contract LendefiViewTest is BasicDeploy {
 
     function test_GetProtocolSnapshot_ConfigValues() public {
         // Test that snapshot correctly reflects protocol configuration
-        ILendefiMarketVault.ProtocolConfig memory config = ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
+        ILendefiMarketVault.ProtocolConfig memory config =
+            ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
         ILENDEFIVIEW.ProtocolSnapshot memory snapshot = lendefiView.getProtocolSnapshot();
 
         assertEq(snapshot.targetReward, config.rewardAmount, "Target reward should match config");
         assertEq(snapshot.rewardInterval, config.rewardInterval, "Reward interval should match config");
         assertEq(snapshot.rewardableSupply, config.rewardableSupply, "Rewardable supply should match config");
         assertEq(snapshot.baseProfitTarget, config.profitTargetRate, "Base profit target should match config");
-        assertEq(snapshot.liquidatorThreshold, marketCoreInstance.liquidatorThreshold(), "Liquidator threshold should match core");
+        assertEq(
+            snapshot.liquidatorThreshold,
+            marketCoreInstance.liquidatorThreshold(),
+            "Liquidator threshold should match core"
+        );
         assertEq(snapshot.flashLoanFee, config.flashLoanFee, "Flash loan fee should match config");
     }
 
@@ -325,7 +330,8 @@ contract LendefiViewTest is BasicDeploy {
         ecoInstance.grantRole(REWARDER_ROLE, address(marketVaultInstance));
 
         // Configure protocol for rewards
-        ILendefiMarketVault.ProtocolConfig memory config = ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
+        ILendefiMarketVault.ProtocolConfig memory config =
+            ILendefiMarketVault(address(marketVaultInstance)).protocolConfig();
         config.rewardAmount = 1_000e18; // Set target reward to 1000 tokens
         config.rewardInterval = 180 * 24 * 60 * 5; // 180 days in blocks (5 blocks per minute)
         config.rewardableSupply = getUSDCAmount(50_000); // Set rewardable supply threshold to 50k USDC

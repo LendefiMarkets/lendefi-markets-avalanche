@@ -133,7 +133,7 @@ contract BTCForkTest is BasicDeploy {
                 primaryOracleType: IASSETS.OracleType.CHAINLINK,
                 tier: IASSETS.CollateralTier.STABLE,
                 chainlinkConfig: IASSETS.ChainlinkOracleConfig({oracleUSD: USDC_CHAINLINK_ORACLE, active: 1}),
-                poolConfig: IASSETS.UniswapPoolConfig({pool: BTC_USDC_POOL, twapPeriod: 1800, active: 1})
+                poolConfig: IASSETS.UniswapPoolConfig({pool: USDT_USDC_POOL, twapPeriod: 1800, active: 1})
             })
         );
 
@@ -246,7 +246,7 @@ contract BTCForkTest is BasicDeploy {
 
         console2.log("Direct BTC/USD oracle call:");
         console2.log("  RoundId:", roundId);
-        console2.log("  Price:", uint256(answer) / 1e8);
+        console2.log("  Price (8 decimals):", uint256(answer));
         console2.log("  Updated at:", updatedAt);
     }
 
@@ -255,7 +255,7 @@ contract BTCForkTest is BasicDeploy {
             AggregatorV3Interface(AVAX_CHAINLINK_ORACLE).latestRoundData();
         console2.log("Direct AVAX/USD oracle call:");
         console2.log("  RoundId:", roundId);
-        console2.log("  Price:", uint256(answer) / 1e8);
+        console2.log("  Price (8 decimals):", uint256(answer));
         console2.log("  Updated at:", updatedAt);
     }
 

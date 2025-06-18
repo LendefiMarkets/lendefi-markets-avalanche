@@ -243,7 +243,7 @@ contract WAVAXForkTest is BasicDeploy {
 
         console2.log("Direct AVAX/USD oracle call:");
         console2.log("  RoundId:", roundId);
-        console2.log("  Price:", uint256(answer) / 1e8);
+        console2.log("  Price (8 decimals):", uint256(answer));
         console2.log("  Updated at:", updatedAt);
     }
 
@@ -252,7 +252,7 @@ contract WAVAXForkTest is BasicDeploy {
             AggregatorV3Interface(BTC_CHAINLINK_ORACLE).latestRoundData();
         console2.log("Direct BTC/USD oracle call:");
         console2.log("  RoundId:", roundId);
-        console2.log("  Price:", uint256(answer) / 1e8);
+        console2.log("  Price (8 decimals):", uint256(answer));
         console2.log("  Updated at:", updatedAt);
     }
 

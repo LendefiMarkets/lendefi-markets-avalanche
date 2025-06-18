@@ -71,7 +71,7 @@ contract AvalancheOracleDebug is Test {
         console2.log("\n=== Oracle vs Pool Price Comparison ===");
 
         // For tokens that have both Chainlink and Uniswap data
-        _compareOracleVsPool("USDC", USDC_CHAINLINK_ORACLE, AVAX_USDC_POOL, USDC, WAVAX);
+        _compareOracleVsPool("USDC", USDC_CHAINLINK_ORACLE, USDT_USDC_POOL, USDC, USDT);
         _compareOracleVsPool("AVAX", AVAX_CHAINLINK_ORACLE, AVAX_USDC_POOL, WAVAX, USDC);
         _compareOracleVsPool("BTC", BTC_CHAINLINK_ORACLE, BTC_USDC_POOL, BTC, USDC);
     }
@@ -85,7 +85,6 @@ contract AvalancheOracleDebug is Test {
         ) {
             console2.log("RoundId:", roundId);
             console2.log("Price (8 decimals):", uint256(answer));
-            console2.log("Price (USD):", uint256(answer) / 1e8);
             console2.log("Updated at:", updatedAt);
             console2.log("Staleness (seconds):", block.timestamp - updatedAt);
             console2.log("Is stale (>8hrs)?", (block.timestamp - updatedAt) > 28800);
@@ -194,9 +193,9 @@ contract AvalancheOracleDebug is Test {
         console2.log("\n--- BTCForkTest: USDC in BTC/USDC Pool ---");
         _debugFailingPool("BTC/USDC", BTC_USDC_POOL, USDC, BTC);
 
-        // Test 2: USDCForkTest - USDC in AVAX/USDC pool
-        console2.log("\n--- USDCForkTest: USDC in AVAX/USDC Pool ---");
-        _debugFailingPool("AVAX/USDC", AVAX_USDC_POOL, USDC, WAVAX);
+        // Test 2: USDCForkTest - USDC in USDT/USDC pool (corrected)
+        console2.log("\n--- USDCForkTest: USDC in USDT/USDC Pool ---");
+        _debugFailingPool("USDT/USDC", USDT_USDC_POOL, USDC, USDT);
 
         // Compare with working USDT in USDT/USDC pool
         console2.log("\n--- Working: USDT in USDT/USDC Pool ---");

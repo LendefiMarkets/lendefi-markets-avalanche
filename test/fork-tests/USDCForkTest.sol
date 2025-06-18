@@ -246,7 +246,7 @@ contract USDCForkTest is BasicDeploy {
 
         console2.log("Direct USDC/USD oracle call:");
         console2.log("  RoundId:", roundId);
-        console2.log("  Price:", uint256(answer) / 1e8);
+        console2.log("  Price (8 decimals):", uint256(answer));
         console2.log("  Updated at:", updatedAt);
         console2.log("  Staleness (seconds):", block.timestamp - updatedAt);
         console2.log("  Is stale (>8hrs)?", (block.timestamp - updatedAt) > 28800);
@@ -260,7 +260,7 @@ contract USDCForkTest is BasicDeploy {
             AggregatorV3Interface(AVAX_CHAINLINK_ORACLE).latestRoundData();
         console2.log("Direct AVAX/USD oracle call:");
         console2.log("  RoundId:", roundId);
-        console2.log("  Price:", uint256(answer) / 1e8);
+        console2.log("  Price (8 decimals):", uint256(answer));
         console2.log("  Updated at:", updatedAt);
         console2.log("  Staleness (seconds):", block.timestamp - updatedAt);
         console2.log("  Is stale (>8hrs)?", (block.timestamp - updatedAt) > 28800);

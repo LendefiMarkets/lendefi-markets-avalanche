@@ -15,7 +15,7 @@
     "coverage": "forge coverage --report lcov --ffi",
     "coverage:html": "genhtml lcov.info -o coverage-report ",
     "deploy:mainnet": "bash -c 'source .env && forge script Deploy --broadcast --chain mainnet --private-key $MAINNET_DEPLOYER_PK'",
-    "deploy:sepolia": "bash -c 'source .env && forge script Deploy --broadcast --chain sepolia --private-key $SEPOLIA_DEPLOYER_PK'",
+    "deploy:fuji": "bash -c 'source .env && forge script script/DeployLendefiDAO.s.sol:DeployLendefiDAO --broadcast --chain fuji --rpc-url https://api.avax-test.network/ext/bc/C/rpc --private-key $FUJI_DEPLOYER_PK --verify --ffi'",
     "lint:check": "npm run lint:sol-logic && forge fmt --check",
     "lint:fix": "sort-package-json && forge fmt && npm run lint:sol-tests --fix && npm run lint:sol-logic --fix",
     "lint:natspec": "npx @defi-wonderland/natspec-smells --config natspec.config.js",

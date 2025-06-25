@@ -302,7 +302,7 @@ contract LendefiAssetsBranchTest is BasicDeploy {
 
     function test_4_4_ChainlinkOracleTimeout() public {
         // Set oracle to return old price
-        uint256 oldTimestamp = block.timestamp - 10 hours; // Assuming freshnessThreshold is 8 hours
+        uint256 oldTimestamp = block.timestamp - 25 hours; // FreshnessThreshold is 24 hours on Avalanche
         mockChainlinkOracle.setTimestamp(oldTimestamp);
 
         vm.expectRevert(
@@ -311,7 +311,7 @@ contract LendefiAssetsBranchTest is BasicDeploy {
                 address(mockChainlinkOracle),
                 oldTimestamp,
                 block.timestamp,
-                28800 // 8 hours default freshness
+                86400 // 24 hours default freshness on Avalanche
             )
         );
         assetsInstance.getAssetPriceByType(address(wethInstance), IASSETS.OracleType.CHAINLINK);

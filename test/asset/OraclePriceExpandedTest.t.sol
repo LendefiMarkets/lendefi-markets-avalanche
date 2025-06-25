@@ -153,8 +153,8 @@ contract OraclePriceExpandedTest is BasicDeploy {
 
     // Test 5: Test timeout (timestamp too old)
     function test_GetAssetPriceOracle_Timeout() public {
-        // Set timestamp to 9 hours ago (beyond the 8 hour freshness threshold)
-        mockOracle.setTimestamp(block.timestamp - 9 hours);
+        // Set timestamp to 25 hours ago (beyond the 24 hour freshness threshold on Avalanche)
+        mockOracle.setTimestamp(block.timestamp - 25 hours);
 
         // Try to get price directly from oracle
         vm.expectRevert();

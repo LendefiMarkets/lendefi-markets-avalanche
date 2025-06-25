@@ -229,7 +229,7 @@ contract AssetsInitializeTest is BasicDeploy {
         ) = assetsContract.mainOracleConfig();
 
         // Verify default values
-        assertEq(freshnessThreshold, 28800, "Freshness threshold should be 28800 (8 hours)");
+        assertEq(freshnessThreshold, 86400, "Freshness threshold should be 86400 (24 hours) on Avalanche");
         assertEq(volatilityThreshold, 3600, "Volatility threshold should be 3600 (1 hour)");
         assertEq(volatilityPercentage, 20, "Volatility percentage should be 20%");
         assertEq(circuitBreakerThreshold, 50, "Circuit breaker threshold should be 50%");

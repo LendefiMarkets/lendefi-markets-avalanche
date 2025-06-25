@@ -22,10 +22,10 @@ pragma solidity 0.8.23;
  */
 
 import {LendefiCore} from "../markets/LendefiCore.sol";
+import {LendefiAssets} from "../markets/LendefiAssets.sol";
 import {LendefiMarketVault} from "../markets/LendefiMarketVault.sol";
 import {IPROTOCOL} from "../interfaces/IProtocol.sol";
 import {ILendefiMarketFactory} from "../interfaces/ILendefiMarketFactory.sol";
-import {IASSETS} from "../interfaces/IASSETS.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -666,7 +666,7 @@ contract LendefiMarketFactoryV2 is ILendefiMarketFactory, Initializable, AccessC
 
         // Initialize assets module contract through proxy
         bytes memory assetsInitData = abi.encodeWithSelector(
-            IASSETS.initialize.selector,
+            LendefiAssets.initialize.selector,
             timelock,
             msg.sender,
             porFeedImplementation,

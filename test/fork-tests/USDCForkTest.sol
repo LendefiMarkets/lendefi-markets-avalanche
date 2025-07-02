@@ -74,10 +74,6 @@ contract USDCForkTest is BasicDeploy {
         timelockInstance.grantRole(CANCELLER_ROLE, address(govInstance));
         vm.stopPrank();
 
-        // TGE setup
-        vm.prank(guardian);
-        tokenInstance.initializeTGE(address(ecoInstance), address(treasuryInstance));
-
         // Configure assets - USDC is base asset, others are collateral
         _configureUSDC();
         _configureUSDT();

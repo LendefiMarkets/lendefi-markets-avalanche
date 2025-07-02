@@ -77,10 +77,6 @@ contract BTCForkTest is BasicDeploy {
         timelockInstance.grantRole(CANCELLER_ROLE, address(govInstance));
         vm.stopPrank();
 
-        // TGE setup
-        vm.prank(guardian);
-        tokenInstance.initializeTGE(address(ecoInstance), address(treasuryInstance));
-
         // Configure assets - BTC.b is base asset, others are collateral
         _configureBTC();
         _configureUSDC();

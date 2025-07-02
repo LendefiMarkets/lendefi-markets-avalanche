@@ -189,6 +189,13 @@ interface ILendefiMarketOwnerDashboard {
     function getOwnerPortfolioStats(address owner) external view returns (OwnerPortfolioStats memory);
 
     /**
+     * @notice Gets detailed information about all liquidity providers across owner's markets
+     * @param owner Address of the market owner
+     * @return Array of LiquidityProviderInfo for all LPs in owner's markets
+     */
+    function getOwnerLiquidityProviders(address owner) external view returns (LiquidityProviderInfo[] memory);
+
+    /**
      * @notice Gets performance analytics for a specific market
      * @param owner Address of the market owner
      * @param baseAsset Address of the base asset

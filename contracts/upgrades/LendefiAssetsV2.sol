@@ -42,39 +42,57 @@ contract LendefiAssetsV2 is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // ==================== STATE VARIABLES ====================
+    // Optimized for storage packing to reduce gas costs
 
+    // Slot 1: Pack small types (1 byte used, 31 bytes available for future expansion)
     /// @notice Current version of the contract implementation
     /// @dev Incremented on each upgrade
     uint8 public version;
 
+    // Slot 2: Core protocol address
     /// @notice Address of the core protocol contract
     /// @dev Used for cross-contract calls and validation
     address public coreAddress;
+
+    // Slot 3: Proof of Reserve factory address
     /// @notice Address of the Proof of Reserve factory
     address public porFeed;
+
+    // Slot 4: Governance timelock address
     /// @notice Address of the timelock contract
     address public timelock;
 
-    /// @notice Network-specific addresses for oracle validation
+    // Slot 5: Network-specific USDC address for BSC oracle validation
     /// @dev Set during initialization to support different networks
-    address public networkUSDC;
-    /// @notice Network-specific AVAX address for oracle calculations
+    address public networkStable;
+
+    // Slot 6: Network-specific WETH address for BSC oracle validation
     address public networkWAVAX;
-    /// @notice Uniswap V3 pool address for USDC/AVAXprice reference
+
+    // Slot 7: USDT/WETH pool address for BSC price validation
     address public usdcAvaxPool;
 
-    /// @notice Information about the currently pending upgrade request
-    /// @dev Stores implementation address and scheduling details
-    UpgradeRequest public pendingUpgrade;
-
+    // Slot 8: Core protocol interface instance
     /// @notice Interface to interact with the core protocol
     /// @dev Used to query protocol state and perform operations
     IPROTOCOL internal lendefiInstance;
 
+    // Slot 9: Pending upgrade information
+    /// @notice Information about the currently pending upgrade request
+    /// @dev Stores implementation address and scheduling details
+    UpgradeRequest public pendingUpgrade;
+
+    // Slot 10: Global oracle configuration parameters
+    /// @notice Global oracle configuration parameters
+    /// @dev Controls oracle freshness, volatility checks, and circuit breaker thresholds
+    MainOracleConfig public mainOracleConfig;
+
+    // Slot 11+: Set of all listed asset addresses
     /// @notice Set of all listed asset addresses
     /// @dev Uses OpenZeppelin's EnumerableSet for efficient membership checks
     EnumerableSet.AddressSet internal listedAssets;
 
+    // Mappings (each gets its own storage tree)
     /// @notice Mapping of asset address to its configuration
     /// @dev Stores complete asset settings including thresholds and oracle configs
     mapping(address => Asset) internal assetInfo;
@@ -83,17 +101,13 @@ contract LendefiAssetsV2 is
     /// @dev Maps tier enum to its associated rates struct
     mapping(CollateralTier => TierRates) public tierConfig;
 
-    /// @notice Global oracle configuration parameters
-    /// @dev Controls oracle freshness, volatility checks, and circuit breaker thresholds
-    MainOracleConfig public mainOracleConfig;
-
     /// @notice Tracks whether circuit breaker is active for an asset
     /// @dev True if price feed is considered unreliable
     mapping(address asset => bool broken) public circuitBroken;
 
     /// @notice Reserved storage gap for future upgrades
     /// @dev Required by OpenZeppelin's upgradeable contracts pattern
-    uint256[19] private __gap;
+    uint256[22] private __gap;
 
     /**
      * @notice Requires that the asset exists in the protocol's listed assets
@@ -129,7 +143,7 @@ contract LendefiAssetsV2 is
      * @param marketOwner Address of the market owner who will have management privileges
      * @param porFeed_ Proof of Reserve feed address
      * @param coreAddress_ Address of the core contract
-     * @param networkUSDC_ Network-specific USDC address for oracle validation
+     * @param networkStable_ Network-specific USDC address for oracle validation
      * @param networkWAVAX_ Network-specific AVAX address for oracle validation
      * @param usdcAvaxPool_ Network-specific USDC/AVAX pool for price reference
      * @custom:security Sets up the initial access control roles:
@@ -150,13 +164,13 @@ contract LendefiAssetsV2 is
         address marketOwner,
         address porFeed_,
         address coreAddress_,
-        address networkUSDC_,
+        address networkStable_,
         address networkWAVAX_,
         address usdcAvaxPool_
     ) external initializer {
         if (
             timelock_ == address(0) || marketOwner == address(0) || porFeed_ == address(0) || coreAddress_ == address(0)
-                || networkUSDC_ == address(0) || networkWAVAX_ == address(0) || usdcAvaxPool_ == address(0)
+                || networkStable_ == address(0) || networkWAVAX_ == address(0) || usdcAvaxPool_ == address(0)
         ) {
             revert ZeroAddressNotAllowed();
         }
@@ -189,7 +203,7 @@ contract LendefiAssetsV2 is
         _grantRole(LendefiConstants.PROTOCOL_ROLE, coreAddress_);
 
         // Set network-specific addresses
-        networkUSDC = networkUSDC_;
+        networkStable = networkStable_;
         networkWAVAX = networkWAVAX_;
         usdcAvaxPool = usdcAvaxPool_;
 
@@ -1015,8 +1029,8 @@ contract LendefiAssetsV2 is
             IUniswapV3Pool ethUSDCPool = IUniswapV3Pool(ethUsdcPool);
             // Dynamically determine AVAX position in ETH/USDC pool
             address token0 = ethUSDCPool.token0();
-            bool AVAXIsToken0 = networkWAVAX == token0;
-            uint256 ethPriceInUSD = UniswapTickMath.getRawPrice(ethUSDCPool, AVAXIsToken0, 1e18, twapPeriod);
+            bool avaxIsToken0 = networkWAVAX == token0;
+            uint256 ethPriceInUSD = UniswapTickMath.getRawPrice(ethUSDCPool, avaxIsToken0, 1e18, twapPeriod);
 
             // Adjust token/ETH price to account for token decimals
             uint256 adjustedPrice = rawPrice / (10 ** (18 - assetDecimals)); // Scale to 1e6 precision
@@ -1126,8 +1140,8 @@ contract LendefiAssetsV2 is
 
         // On Ethereum mainnet, ensure pool contains USDC or AVAX for pricing
         if (block.chainid == LendefiConstants.AVALANCHE_CHAIN_ID) {
-            bool hasValidPairing =
-                (token0 == networkUSDC || token0 == networkWAVAX) || (token1 == networkUSDC || token1 == networkWAVAX);
+            bool hasValidPairing = (token0 == networkStable || token0 == networkWAVAX)
+                || (token1 == networkStable || token1 == networkWAVAX);
             if (!hasValidPairing) {
                 string memory symbol0 = IERC20Metadata(token0).symbol();
                 string memory symbol1 = IERC20Metadata(token1).symbol();

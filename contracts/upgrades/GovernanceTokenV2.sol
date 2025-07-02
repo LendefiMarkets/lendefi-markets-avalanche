@@ -73,6 +73,7 @@ contract GovernanceTokenV2 is
     uint32 public version;
     /// @dev tge initialized variable
     uint32 public tge;
+
     /// @dev number of active chains in the ecosystem
     uint32 public activeChains;
     /// @dev Upgrade request structure
@@ -258,20 +259,6 @@ contract GovernanceTokenV2 is
     }
 
     /**
-     * @dev Sets the bridge address with BRIDGE_ROLE
-     * @param bridgeAddress The address of the bridge contract
-     * @custom:requires-role MANAGER_ROLE
-     * @custom:throws ZeroAddress if bridgeAddress is zero
-     */
-    function setBridgeAddress(address bridgeAddress) external onlyRole(MANAGER_ROLE) {
-        if (bridgeAddress == address(0)) revert ZeroAddress();
-
-        _grantRole(BRIDGE_ROLE, bridgeAddress);
-
-        emit BridgeRoleAssigned(msg.sender, bridgeAddress);
-    }
-
-    /**
      * @dev Initializes the Token Generation Event (TGE).
      * @notice Sets up the initial token distribution between the ecosystem and treasury contracts.
      * @param ecosystem The address of the ecosystem contract.
@@ -396,8 +383,12 @@ contract GovernanceTokenV2 is
     /// @notice grants both mint and burn roles to `burnAndMinter`.
     /// @dev calls public functions so this function does not require
     /// access controls. This is handled in the inner functions.
-    function grantMintAndBurnRoles(address burnAndMinter) external {
-        grantRole(BRIDGE_ROLE, burnAndMinter);
+    function grantMintAndBurnRoles(address burnAndMinter) external onlyRole(MANAGER_ROLE) {
+        if (burnAndMinter == address(0)) revert ZeroAddress();
+
+        _grantRole(BRIDGE_ROLE, burnAndMinter);
+
+        emit BridgeRoleAssigned(msg.sender, burnAndMinter);
     }
 
     /// @notice Transfers the CCIPAdmin role to a new address
@@ -405,6 +396,7 @@ contract GovernanceTokenV2 is
     /// @param newAdmin The address to transfer the CCIPAdmin role to. Setting to address(0) is a valid way to revoke
     /// the role
     function setCCIPAdmin(address newAdmin) external onlyRole(MANAGER_ROLE) {
+        if (newAdmin == address(0)) revert ZeroAddress();
         address currentAdmin = ccipAdmin;
 
         ccipAdmin = newAdmin;

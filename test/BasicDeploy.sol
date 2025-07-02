@@ -845,6 +845,15 @@ contract BasicDeploy is Test {
         vm.prank(gnosisSafe);
         marketFactoryInstance.addAllowedBaseAsset(baseAsset);
 
+        // Setup governance tokens for charlie (required for permissionless market creation)
+        // Transfer governance tokens from guardian to charlie (guardian received DEPLOYER_SHARE during TGE)
+        vm.prank(guardian);
+        tokenInstance.transfer(charlie, 10000 ether); // Transfer 10,000 tokens (more than the 1000 required)
+
+        // Charlie approves factory to spend governance tokens
+        vm.prank(charlie);
+        tokenInstance.approve(address(marketFactoryInstance), 100 ether); // Approve the 100 tokens that will be transferred
+
         // Create market via factory (charlie as market owner)
         vm.prank(charlie);
         marketFactoryInstance.createMarket(baseAsset, name, symbol);
@@ -882,6 +891,12 @@ contract BasicDeploy is Test {
         // if (address(assetsInstance) == address(0)) _deployAssetsModule();
 
         if (address(usdcInstance) == address(0)) usdcInstance = new USDC();
+
+        // Initialize TGE if not already done (gives guardian initial token allocation)
+        if (tokenInstance.tge() == 0) {
+            vm.prank(guardian);
+            tokenInstance.initializeTGE(address(ecoInstance), address(treasuryInstance));
+        }
 
         // Deploy market factory
         _deployMarketFactory();

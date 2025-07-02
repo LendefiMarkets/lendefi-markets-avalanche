@@ -47,7 +47,7 @@ contract BasicDeploy is Test {
     LendefiMarketFactory internal marketFactoryInstance;
     LendefiCore internal marketCoreInstance;
     LendefiMarketVault internal marketVaultInstance;
-    
+
     // Fork test specific IERC20 instances for Avalanche
     IERC20 usdcInstance = IERC20(0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E); //real USDC Avalanche for fork testing
     IERC20 usdtInstance = IERC20(0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7); //real USDT Avalanche for fork testing
@@ -167,6 +167,10 @@ contract BasicDeploy is Test {
             address(assetsImpl),
             address(porFeedImpl)
         );
+
+        // TGE setup - MUST be done before market creation to give guardian tokens
+        vm.prank(guardian);
+        tokenInstance.initializeTGE(address(ecoInstance), address(treasuryInstance));
     }
 
     /**
@@ -189,6 +193,15 @@ contract BasicDeploy is Test {
         // Add base asset to allowlist (done by multisig which has MANAGER_ROLE)
         vm.prank(gnosisSafe);
         marketFactoryInstance.addAllowedBaseAsset(baseAsset);
+
+        // Setup governance tokens for charlie (required for permissionless market creation)
+        // Transfer governance tokens from guardian to charlie (guardian received DEPLOYER_SHARE during TGE)
+        vm.prank(guardian);
+        tokenInstance.transfer(charlie, 10000 ether); // Transfer 10,000 tokens (more than the 1000 required)
+
+        // Charlie approves factory to spend governance tokens
+        vm.prank(charlie);
+        tokenInstance.approve(address(marketFactoryInstance), 100 ether); // Approve the 100 tokens that will be transferred
 
         // Create market via factory (charlie as market owner)
         vm.prank(charlie);

@@ -1,8 +1,8 @@
 {
-  "name": "lendefi-markets",
+  "name": "lendefi-markets-avalanche",
   "private": true,
   "description": "Lendefi Markets Contracts",
-  "homepage": "https://github.com/nebula-labs-xyz/lendefi-markets#readme",
+  "homepage": "https://github.com/nebula-labs-xyz/lendefi-markets-avalanche#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nebula-labs-xyz/lendefi-markets-avalanche.git"

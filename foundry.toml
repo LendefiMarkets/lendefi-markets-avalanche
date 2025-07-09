@@ -12,7 +12,7 @@ optimizer_runs = 8
 runs = 1000
 
 [rpc_endpoints]
-mainnet = "https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+avalanche = "https://avax-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
 fuji = "${FUJI_RPC_URL}"
 anvil = "http://localhost:8545"
 
@@ -21,5 +21,5 @@ chains = "all"  # or specific chain IDs
 endpoints = "all"  # or specific URLs
 
 [etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}", chain = "mainnet" }
+avalanche = { key = "${ETHERSCAN_API_KEY}", chain = "avalanche" }
 fuji = { key = "${ETHERSCAN_API_KEY}", chain = "fuji" }

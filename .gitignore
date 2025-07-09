@@ -27,6 +27,7 @@ broadcast/*/*/*
 # Out dir
 out
 script/
+script-fuji/
 script-anvil/
 script-sepolia/
 dapp
